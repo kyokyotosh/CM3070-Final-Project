@@ -47,6 +47,8 @@ class SquatAnalyzer:
                 "rep_number": self.rep_count,
                 "depth_ok": self.min_knee_this_rep <= PARALLEL,
                 "trunk_ok": self.max_trunk_this_rep <= TRUNK_MAX,
+                "min_knee": round(self.min_knee_this_rep, 1),
+                "max_trunk": round(self.max_trunk_this_rep, 1),
             }
 
         return self._status(), verdict

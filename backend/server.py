@@ -24,6 +24,10 @@ async def handler(websocket):
             last_coaching = status["feedback"]
         if verdict is not None:
             last_coaching = await phrase_feedback(verdict)
+            with open("eval_log.csv", "a") as f:
+                f.write(f"{verdict['rep_number']},{verdict['depth_ok']},"
+                        f"{verdict['trunk_ok']},{verdict['min_knee']},"
+                        f"{verdict['max_trunk']},\"{last_coaching}\"\n")
 
         response = {
             "coaching": last_coaching,
