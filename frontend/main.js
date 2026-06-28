@@ -8,6 +8,7 @@ const video = document.getElementById("webcam");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const coachingText = document.getElementById("coaching-text");
+const repCount = document.getElementById("rep-count");
 
 let poseLandmarker = null;
 let lastVideoTime = -1;
@@ -25,6 +26,9 @@ socket.addEventListener("error", () => {
 
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
+    if (typeof data.reps === "number") {
+        repCount.textContent = "Reps: " + data.reps;
+    }
     coachingText.textContent = data.coaching;
 });
 

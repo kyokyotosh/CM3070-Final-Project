@@ -2,10 +2,12 @@ import asyncio
 import json
 from websockets.asyncio.server import serve
 from angles import analyze_landmarks
+from squat import SquatAnalyzer
 
 
 async def handler(websocket):
     print("Client connected")
+    analyzer = SquatAnalyzer()
     async for message in websocket:
         try:
             data = json.loads(message)
@@ -14,18 +16,14 @@ async def handler(websocket):
 
         landmarks = data.get("landmarks", [])
         angles = analyze_landmarks(landmarks)
+        status = analyzer.update(angles)
 
-        if angles is None:
-            response = {
-                "coaching": "No pose detected. Make sure your whole body is visible."}
-        else:
-            response = {
-                "coaching": (
-                    f"Knee L {angles['left_knee']}° / R {angles['right_knee']}°  |  "
-                    f"Trunk lean {angles['trunk_lean']}°"
-                ),
-                "angles": angles,
-            }
+        response = {
+            "coaching": status["feedback"],
+            "reps": status["rep_count"],
+            "phase": status["phase"],
+            "angles": angles,
+        }
         await websocket.send(json.dumps(response))
     print("Client disconnected")
 

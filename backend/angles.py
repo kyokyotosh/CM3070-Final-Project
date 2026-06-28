@@ -32,9 +32,17 @@ def trunk_lean(shoulder, hip):
     return abs(math.degrees(math.atan2(dx, -dy)))
 
 
+def leg_visibility(landmarks, hip_idx, knee_idx, ankle_idx):
+    vis = [
+        landmarks[hip_idx].get("visibility", 0.0),
+        landmarks[knee_idx].get("visibility", 0.0),
+        landmarks[ankle_idx].get("visibility", 0.0),
+    ]
+    return sum(vis) / len(vis)
+
+
 def analyze_landmarks(landmarks):
-    """Compute squat-relevant joint angles from 33 landmarks.
-    Returns None if landmarks are missing."""
+    """Compute squat-relevant angles, selecting the more visible leg."""
     if not landmarks or len(landmarks) < 33:
         return None
 
@@ -43,13 +51,22 @@ def analyze_landmarks(landmarks):
     right_knee = angle_at(
         landmarks[RIGHT_HIP], landmarks[RIGHT_KNEE], landmarks[RIGHT_ANKLE])
 
+    left_vis = leg_visibility(landmarks, LEFT_HIP, LEFT_KNEE, LEFT_ANKLE)
+    right_vis = leg_visibility(landmarks, RIGHT_HIP, RIGHT_KNEE, RIGHT_ANKLE)
+
+    if left_vis >= right_vis:
+        knee, side, knee_vis = left_knee, "left", left_vis
+    else:
+        knee, side, knee_vis = right_knee, "right", right_vis
+
     mid_shoulder = midpoint(
         landmarks[LEFT_SHOULDER], landmarks[RIGHT_SHOULDER])
     mid_hip = midpoint(landmarks[LEFT_HIP], landmarks[RIGHT_HIP])
     trunk = trunk_lean(mid_shoulder, mid_hip)
 
     return {
-        "left_knee": round(left_knee, 1),
-        "right_knee": round(right_knee, 1),
+        "knee": round(knee, 1),
+        "side": side,
+        "knee_visibility": round(knee_vis, 2),
         "trunk_lean": round(trunk, 1),
     }
