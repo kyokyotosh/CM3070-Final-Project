@@ -11,6 +11,22 @@ const coachingText = document.getElementById("coaching-text");
 
 let poseLandmarker = null;
 let lastVideoTime = -1;
+let lastSendTime = 0;
+
+const socket = new WebSocket("ws://localhost:8765");
+
+socket.addEventListener("open", () => {
+    console.log("Connected to backend");
+});
+
+socket.addEventListener("error", () => {
+    coachingText.textContent = "Backend not connected. Start the Python server.";
+});
+
+socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    coachingText.textContent = data.coaching;
+});
 
 async function createPoseLandmarker() {
     const vision = await FilesetResolver.forVisionTasks(
@@ -25,7 +41,8 @@ async function createPoseLandmarker() {
         runningMode: "VIDEO",
         numPoses: 1
     });
-    coachingText.textContent = "Model loaded. Stand back so your whole body is in frame.";
+    coachingText.textContent = "Model loaded.";
+    console.log("Pose model ready");
 }
 
 async function startCamera() {
@@ -36,7 +53,6 @@ async function startCamera() {
         });
         video.srcObject = stream;
         video.addEventListener("loadeddata", predictLoop);
-        coachingText.textContent = "Camera ready. Loading model...";
     } catch (err) {
         coachingText.textContent = "Could not access camera. Please allow camera access and reload.";
         console.error(err);
@@ -65,9 +81,25 @@ function drawResult(result) {
         for (const landmarks of result.landmarks) {
             utils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "rgb(0, 255, 0)", lineWidth: 2 });
             utils.drawLandmarks(landmarks, { radius: 3, color: "rgb(255, 0, 0)" });
+            maybeSendLandmarks(landmarks);
         }
     }
 }
 
-createPoseLandmarker();
+function maybeSendLandmarks(landmarks) {
+    const now = performance.now();
+    if (now - lastSendTime < 200) return;
+    if (socket.readyState !== WebSocket.OPEN) return;
+    lastSendTime = now;
+
+    const payload = landmarks.map(p => ({
+        x: p.x, y: p.y, z: p.z, visibility: p.visibility
+    }));
+    socket.send(JSON.stringify({ landmarks: payload }));
+}
+
+createPoseLandmarker().catch(err => {
+    coachingText.textContent = "Model failed to load: " + err.message;
+    console.error(err);
+});
 startCamera();
