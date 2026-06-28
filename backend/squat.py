@@ -20,23 +20,22 @@ class SquatAnalyzer:
         self.rep_count = 0
         self.min_knee_this_rep = 180.0
         self.max_trunk_this_rep = 0.0
-        self.last_feedback = "Stand side-on to the camera and begin squatting."
 
     def update(self, angles):
+        rep_completed = False
         if angles is None:
-            return self._status("No pose detected.")
+            return self._status("No pose detected."), None
         if angles["knee_visibility"] < MIN_VISIBILITY:
-            return self._status("Step back so your legs are clearly visible.")
+            return self._status("Step back so your legs are clearly visible."), None
 
         knee = angles["knee"]
         trunk = angles["trunk_lean"]
 
-        # Track the extremes of the current descent
         if self.phase == "down":
             self.min_knee_this_rep = min(self.min_knee_this_rep, knee)
             self.max_trunk_this_rep = max(self.max_trunk_this_rep, trunk)
 
-        # State transitions with hysteresis
+        verdict = None
         if self.phase == "up" and knee < DOWN_ENTER:
             self.phase = "down"
             self.min_knee_this_rep = knee
@@ -44,24 +43,17 @@ class SquatAnalyzer:
         elif self.phase == "down" and knee > UP_EXIT:
             self.phase = "up"
             self.rep_count += 1
-            self.last_feedback = self._judge_rep()
+            verdict = {
+                "rep_number": self.rep_count,
+                "depth_ok": self.min_knee_this_rep <= PARALLEL,
+                "trunk_ok": self.max_trunk_this_rep <= TRUNK_MAX,
+            }
 
-        return self._status()
-
-    def _judge_rep(self):
-        faults = []
-        if self.min_knee_this_rep > PARALLEL:
-            faults.append(
-                "aim to squat deeper, until your thighs are parallel")
-        if self.max_trunk_this_rep > TRUNK_MAX:
-            faults.append("try to keep your chest more upright")
-        if not faults:
-            return "Good rep with full depth and a stable torso."
-        return "Rep counted. " + " Also, ".join(f.capitalize() for f in faults) + "."
+        return self._status(), verdict
 
     def _status(self, message=None):
         return {
             "rep_count": self.rep_count,
             "phase": self.phase,
-            "feedback": message if message is not None else self.last_feedback,
+            "feedback": message,
         }
