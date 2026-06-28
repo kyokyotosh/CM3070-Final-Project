@@ -42,7 +42,6 @@ async function createPoseLandmarker() {
         numPoses: 1
     });
     coachingText.textContent = "Model loaded.";
-    console.log("Pose model ready");
 }
 
 async function startCamera() {
