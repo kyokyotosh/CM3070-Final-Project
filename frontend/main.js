@@ -9,6 +9,7 @@ const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const coachingText = document.getElementById("coaching-text");
 const repCount = document.getElementById("rep-count");
+const exerciseSelect = document.getElementById("exercise-select");
 
 let poseLandmarker = null;
 let lastVideoTime = -1;
@@ -98,7 +99,10 @@ function maybeSendLandmarks(landmarks) {
     const payload = landmarks.map(p => ({
         x: p.x, y: p.y, z: p.z, visibility: p.visibility
     }));
-    socket.send(JSON.stringify({ landmarks: payload }));
+    socket.send(JSON.stringify({
+        exercise: exerciseSelect.value,
+        landmarks: payload
+    }));
 }
 
 createPoseLandmarker().catch(err => {
