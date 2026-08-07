@@ -13,6 +13,12 @@ class SquatAnalyzer:
     Holds per-session state. The knee angle drives a two-phase state
     machine (up / down) with hysteresis to avoid double-counting. Depth
     and trunk lean are judged once per completed rep.
+
+    Trunk lean is now aggregated only while it is valid. angles.analyze_
+    landmarks gates the shoulder-hip vector on landmark visibility and
+    returns trunk_lean as None when it cannot be trusted, so a dropped
+    landmark can no longer push an impossible angle (the 175-179 degree
+    readings seen in the prototype evaluation) into the verdict.
     """
 
     def __init__(self):
@@ -20,9 +26,9 @@ class SquatAnalyzer:
         self.rep_count = 0
         self.min_knee_this_rep = 180.0
         self.max_trunk_this_rep = 0.0
+        self.trunk_seen_this_rep = False
 
     def update(self, angles):
-        rep_completed = False
         if angles is None:
             return self._status("No pose detected."), None
         if angles["knee_visibility"] < MIN_VISIBILITY:
@@ -30,25 +36,38 @@ class SquatAnalyzer:
 
         knee = angles["knee"]
         trunk = angles["trunk_lean"]
+        trunk_valid = angles.get("trunk_valid", trunk is not None)
 
         if self.phase == "down":
             self.min_knee_this_rep = min(self.min_knee_this_rep, knee)
-            self.max_trunk_this_rep = max(self.max_trunk_this_rep, trunk)
+            if trunk_valid and trunk is not None:
+                self.max_trunk_this_rep = max(self.max_trunk_this_rep, trunk)
+                self.trunk_seen_this_rep = True
 
         verdict = None
         if self.phase == "up" and knee < DOWN_ENTER:
             self.phase = "down"
             self.min_knee_this_rep = knee
-            self.max_trunk_this_rep = trunk
+            if trunk_valid and trunk is not None:
+                self.max_trunk_this_rep = trunk
+                self.trunk_seen_this_rep = True
+            else:
+                self.max_trunk_this_rep = 0.0
+                self.trunk_seen_this_rep = False
         elif self.phase == "down" and knee > UP_EXIT:
             self.phase = "up"
             self.rep_count += 1
             verdict = {
+                "exercise": "squat",
                 "rep_number": self.rep_count,
                 "depth_ok": self.min_knee_this_rep <= PARALLEL,
-                "trunk_ok": self.max_trunk_this_rep <= TRUNK_MAX,
+                # Report posture as unknown rather than a silent pass when the
+                # trunk was never confidently measured during the rep.
+                "trunk_ok": (self.max_trunk_this_rep <= TRUNK_MAX)
+                            if self.trunk_seen_this_rep else None,
                 "min_knee": round(self.min_knee_this_rep, 1),
-                "max_trunk": round(self.max_trunk_this_rep, 1),
+                "max_trunk": round(self.max_trunk_this_rep, 1)
+                if self.trunk_seen_this_rep else None,
             }
 
         return self._status(), verdict
