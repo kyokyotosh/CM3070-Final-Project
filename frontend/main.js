@@ -9,6 +9,12 @@ const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const exerciseSelect = document.getElementById("exercise-select");
 
+// Landmarks are sent at a fixed interval rather than every frame. Form
+// feedback does not need frame-by-frame updates, and the interval also caps
+// how often the language model is called. It is named here because it is part
+// of the reported latency budget.
+const SEND_INTERVAL_MS = 200;
+
 let poseLandmarker = null;
 let lastVideoTime = -1;
 let lastSendTime = 0;
@@ -28,44 +34,56 @@ socket.addEventListener("close", () => {
     CoachUI.setStatus("offline", "Backend disconnected");
 });
 
-let lastRepSeen = 0;
 let lastCoaching = "";
 
-// The backend may report faults as a list or as a flag object; both end up
-// as a list of identifiers here.
-function normaliseFaults(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw === "object") return Object.keys(raw).filter(k => raw[k]);
-    return [raw];
+function send(payload) {
+    if (socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify(payload));
 }
 
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 
-    const reps = typeof data.reps === "number" ? data.reps : null;
-
-    // A completed repetition: one feed item, one graph point.
-    if (reps !== null && reps > lastRepSeen) {
-        lastRepSeen = reps;
+    // A completed repetition carries the full verdict: the faults the rule
+    // layer detected, the measurements behind them, the quality score it
+    // assigned, and the coaching line the language model phrased from it.
+    if (data.type === "rep") {
         lastCoaching = data.coaching || "";
         CoachUI.pushRep({
-            rep: reps,
-            exercise: exerciseSelect.value,
-            faults: normaliseFaults(data.faults),
+            rep: data.rep,
+            exercise: data.exercise,
+            faults: data.faults || [],
             text: data.coaching || "",
-            metrics: data.angles || data.metrics || {},
+            metrics: data.metrics || {},
+            quality: data.quality,
+            partial: data.partial,
             latencyMs: data.latency_ms
         });
         return;
     }
 
     // Anything else is live status text, not a rep.
+    if (data.exercise) CoachUI.setExercise(data.exercise);
     if (data.coaching && data.coaching !== lastCoaching) {
         lastCoaching = data.coaching;
         CoachUI.setCoaching(data.coaching);
     }
 });
+
+// Switching exercise rebuilds the analyser on the backend, which restarts the
+// rep count. The panel is cleared here so both ends agree about the session.
+if (exerciseSelect) {
+    exerciseSelect.addEventListener("change", () => {
+        CoachUI.reset();
+        send({ type: "exercise", exercise: exerciseSelect.value });
+    });
+}
+
+// Clearing the feed is a session reset, not only a repaint: without telling
+// the backend, its rep counter would carry on from where it left off.
+CoachUI.onReset = () => {
+    send({ type: "reset", exercise: exerciseSelect ? exerciseSelect.value : "squat" });
+};
 
 async function createPoseLandmarker() {
     const vision = await FilesetResolver.forVisionTasks(
@@ -144,17 +162,22 @@ function drawResult(result) {
 
 function maybeSendLandmarks(landmarks) {
     const now = performance.now();
-    if (now - lastSendTime < 200) return;
+    if (now - lastSendTime < SEND_INTERVAL_MS) return;
     if (socket.readyState !== WebSocket.OPEN) return;
     lastSendTime = now;
 
     const payload = landmarks.map(p => ({
         x: p.x, y: p.y, z: p.z, visibility: p.visibility
     }));
-    socket.send(JSON.stringify({
+    // The wall-clock stamp travels with the frame and comes back on the rep
+    // message, which is what makes true end-to-end latency measurable rather
+    // than inferred from the backend's own processing time.
+    send({
+        type: "frame",
         exercise: exerciseSelect.value,
+        client_ts: Date.now(),
         landmarks: payload
-    }));
+    });
 }
 
 createPoseLandmarker().catch(err => {

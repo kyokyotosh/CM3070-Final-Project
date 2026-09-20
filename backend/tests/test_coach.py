@@ -17,6 +17,11 @@ with no server and no stub:  python3 -m unittest test_coach -v
 """
 
 
+def test_server_contract_exports(self):
+    """server.py imports these by name; a rename must fail here, not at runtime."""
+    from coach import detect_faults, select_faults, phrase_feedback
+
+
 def squat_verdict(rep=1, depth_ok=True, trunk_ok=True):
     return {"exercise": "squat", "rep_number": rep,
             "depth_ok": depth_ok, "trunk_ok": trunk_ok}

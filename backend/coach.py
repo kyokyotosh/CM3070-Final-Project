@@ -30,30 +30,47 @@ SYSTEM_PROMPT = (
 # criterion could not be measured this rep and is not surfaced as a fault.
 MAX_FAULTS_SURFACED = 2
 
-# (verdict_key, exercise or None for any, fallback cue, description for the LLM)
+# (verdict_key, exercise or None for any, canonical name, fallback cue,
+#  description for the LLM)
 _FAULTS = [
-    ("trunk_ok",       None,    "keep your chest up",
+    ("trunk_ok",       None,    "trunk_lean",
+     "keep your chest up",
      "Torso: leaned too far forward."),
-    ("knee_travel_ok", "lunge", "keep your front knee over your ankle",
+    ("knee_travel_ok", "lunge", "knee_travel",
+     "keep your front knee over your ankle",
      "Front knee: drifted too far past the toes."),
-    ("depth_ok",       "squat", "squat a little deeper",
+    ("depth_ok",       "squat", "shallow_depth",
+     "squat a little deeper",
      "Depth: did not reach parallel."),
-    ("depth_ok",       "lunge", "drop your front knee lower",
+    ("depth_ok",       "lunge", "shallow_depth",
+     "drop your front knee lower",
      "Depth: front knee did not bend enough."),
 ]
+
+
+def _breached(verdict):
+    """Every breached criterion, uncapped, in priority order."""
+    exercise = verdict.get("exercise", "squat")
+    found = []
+    for key, exo, name, cue, desc in _FAULTS:
+        if exo is not None and exo != exercise:
+            continue
+        if verdict.get(key) is False:  # None (unmeasured) is not a fault
+            found.append((name, cue, desc))
+    return found
+
+
+def detect_faults(verdict):
+    """Canonical names of every fault detected, including any beyond the cue
+    cap. The interface renders these, so a fault that could not fit into one
+    spoken sentence is still visible to the user."""
+    return [name for name, _, _ in _breached(verdict)]
 
 
 def select_faults(verdict):
     """Return the prioritised, capped list of (cue, description) faults for a
     verdict. Deterministic: no language model involved."""
-    exercise = verdict.get("exercise", "squat")
-    faults = []
-    for key, exo, cue, desc in _FAULTS:
-        if exo is not None and exo != exercise:
-            continue
-        if verdict.get(key) is False:  # None (unmeasured) is not a fault
-            faults.append((cue, desc))
-    return faults[:MAX_FAULTS_SURFACED]
+    return [(cue, desc) for _, cue, desc in _breached(verdict)][:MAX_FAULTS_SURFACED]
 
 
 def _label(verdict):
