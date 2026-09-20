@@ -35,7 +35,12 @@ URL = "ws://localhost:8765"
 
 # Frame rate of the real client. Landmarks are sent on this interval so the
 # measured path matches the deployed configuration.
-FRAME_INTERVAL_MS = 200
+FRAME_INTERVAL_MS = 1000 / 15
+
+# The server analyses every third frame, so each intended analysis frame is
+# sent this many times. Rep cadences stay expressed in analysis frames, which
+# keeps results comparable with the runs made before the rate increase.
+FRAMES_PER_ANALYSIS = 3
 
 # Fixed skeleton geometry, in normalised image coordinates. The hip and ankle
 # stay put and the knee is moved to produce the requested angle.
@@ -95,7 +100,8 @@ def rep_angles(period_ms, bottom):
     standing threshold, so the shortest possible cadence is two frame
     intervals. Longer cadences hold the bottom position for the extra frames.
     """
-    frames = max(2, round(period_ms / FRAME_INTERVAL_MS))
+    frames = max(
+        2, round(period_ms / (FRAME_INTERVAL_MS * FRAMES_PER_ANALYSIS)))
     return [bottom] * (frames - 1) + [STANDING_KNEE]
 
 
@@ -165,13 +171,14 @@ async def run(args):
         started = time.perf_counter()
         for _ in range(args.reps):
             for knee in rep_angles(args.period, args.bottom):
-                await ws.send(json.dumps({
-                    "type": "frame",
-                    "exercise": "squat",
-                    "client_ts": time.time() * 1000.0,
-                    "landmarks": pose(knee, args.trunk),
-                }))
-                await asyncio.sleep(FRAME_INTERVAL_MS / 1000.0)
+                for _ in range(FRAMES_PER_ANALYSIS):
+                    await ws.send(json.dumps({
+                        "type": "frame",
+                        "exercise": "squat",
+                        "client_ts": time.time() * 1000.0,
+                        "landmarks": pose(knee, args.trunk),
+                    }))
+                    await asyncio.sleep(FRAME_INTERVAL_MS / 1000.0)
         elapsed = time.perf_counter() - started
 
         # Wait for cues still in the queue behind the model.

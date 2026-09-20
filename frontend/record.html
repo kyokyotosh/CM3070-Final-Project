@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Landmark recorder CM3070</title>
+    <style>
+        :root {
+            --bg: #14150f;
+            --surface: #1c1e16;
+            --line: #2f322a;
+            --ink: #e8e6dc;
+            --ink-mute: #9a9c90;
+            --good: #7fb096;
+            --warn: #c8924a;
+            --rec: #c4553f;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f3f0e7;
+                --surface: #fbf9f3;
+                --line: #ddd8c9;
+                --ink: #2a2b23;
+                --ink-mute: #6d6f63;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--ink);
+            font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 16px;
+        }
+
+        .wrap {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 280px;
+            gap: 16px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .viewport {
+            position: relative;
+            aspect-ratio: 4 / 3;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        #webcam,
+        #overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--ink-mute);
+        }
+
+        select,
+        input {
+            padding: 7px 9px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--ink);
+            font: inherit;
+        }
+
+        button {
+            padding: 10px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--ink);
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button[disabled] {
+            opacity: .45;
+            cursor: default;
+        }
+
+        #record[data-state="on"] {
+            border-color: var(--rec);
+            color: var(--rec);
+        }
+
+        .stats {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            padding: 10px 12px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stats div {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+
+        .stats span:first-child {
+            color: var(--ink-mute);
+        }
+
+        .hint {
+            color: var(--ink-mute);
+            font-size: 12px;
+        }
+
+        .sessions {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            padding: 10px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .sessions p {
+            margin: 0 0 4px;
+            color: var(--ink-mute);
+        }
+
+        .sessions ol {
+            margin: 0;
+            padding-left: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Landmark recorder</h1>
+
+    <div class="wrap">
+        <div class="viewport">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+        </div>
+
+        <aside class="panel">
+            <div class="field">
+                <label for="label">Class</label>
+                <select id="label">
+                    <option value="squat">squat</option>
+                    <option value="lunge">lunge</option>
+                    <option value="other">other (not exercising)</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="distance">Camera distance</label>
+                <select id="distance">
+                    <option value="near">near</option>
+                    <option value="mid" selected>mid</option>
+                    <option value="far">far</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="lighting">Lighting</label>
+                <select id="lighting">
+                    <option value="bright" selected>bright</option>
+                    <option value="dim">dim</option>
+                    <option value="backlit">backlit</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="notes">Notes (optional)</label>
+                <input id="notes" type="text" placeholder="e.g. side-on, left lead leg">
+            </div>
+
+            <button id="record" data-state="off" disabled>Loading model</button>
+
+            <div class="stats">
+                <div><span>State</span><span id="state">idle</span></div>
+                <div><span>Duration</span><span id="duration">0.0 s</span></div>
+                <div><span>Frames</span><span id="frames">0</span></div>
+                <div><span>Capture rate</span><span id="rate">-</span></div>
+                <div><span>Pose detected</span><span id="detected">no</span></div>
+            </div>
+
+            <p class="hint">Recording stops and downloads a JSON file. Keep one
+                class per session and start a new session when you change
+                distance or lighting.</p>
+
+            <div class="sessions">
+                <p>Recorded this page load</p>
+                <ol id="session-list"></ol>
+            </div>
+        </aside>
+    </div>
+
+    <script type="module" src="record.js"></script>
+</body>
+
+</html>

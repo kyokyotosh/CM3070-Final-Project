@@ -38,6 +38,11 @@ LOG_COLUMNS = [
     "queue_ms", "llm_ms", "cue_ms", "coaching",
 ]
 
+# The client streams at 15 Hz for the action recogniser. Form analysis runs
+# on every third frame, preserving the 200 ms interval its thresholds were
+# calibrated against and keeping latency results comparable across versions.
+ANALYSIS_STRIDE = 3
+
 
 def _make(exercise):
     analyze, analyzer_cls = EXERCISES.get(
@@ -168,6 +173,7 @@ async def handler(websocket):
     cue_queue = asyncio.Queue()
     writer = asyncio.create_task(_writer(websocket, outbox))
     cue_worker = asyncio.create_task(_cue_worker(cue_queue, outbox, session))
+    frame_index = 0
 
     try:
         async for message in websocket:
@@ -207,6 +213,10 @@ async def handler(websocket):
 
             landmarks = data.get("landmarks", [])
             client_ts = data.get("client_ts")
+
+            frame_index += 1
+            if frame_index % ANALYSIS_STRIDE != 0:
+                continue
 
             analysis_start = time.perf_counter()
             angles = analyze(landmarks)

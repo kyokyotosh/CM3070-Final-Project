@@ -9,11 +9,12 @@ const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const exerciseSelect = document.getElementById("exercise-select");
 
-// Landmarks are sent at a fixed interval rather than every frame. Form
-// feedback does not need frame-by-frame updates, and the interval also caps
-// how often the language model is called. It is named here because it is part
-// of the reported latency budget.
-const SEND_INTERVAL_MS = 200;
+// Landmarks are streamed at 15 Hz. The form analyser does not need this
+// rate and the server samples every third frame for it, keeping the 200 ms
+// analysis interval the thresholds were calibrated against. The higher rate
+// exists for the action recogniser, which needs the shape of the movement
+// over time rather than threshold crossings.
+const SEND_INTERVAL_MS = 1000 / 15;
 
 let poseLandmarker = null;
 let lastVideoTime = -1;
