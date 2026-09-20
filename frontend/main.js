@@ -42,7 +42,6 @@ function normaliseFaults(raw) {
 
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
-    console.log("verdict payload", data);   // temporary
 
     const reps = typeof data.reps === "number" ? data.reps : null;
 
