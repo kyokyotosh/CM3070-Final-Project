@@ -44,21 +44,27 @@ function send(payload) {
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 
-    // A completed repetition carries the full verdict: the faults the rule
-    // layer detected, the measurements behind them, the quality score it
-    // assigned, and the coaching line the language model phrased from it.
+    // A completed repetition. Everything here was decided by the rule layer,
+    // so it arrives as soon as the rep ends: the verdict, the measurements
+    // behind it, and the quality score. The wording follows separately.
     if (data.type === "rep") {
-        lastCoaching = data.coaching || "";
         CoachUI.pushRep({
             rep: data.rep,
             exercise: data.exercise,
             faults: data.faults || [],
-            text: data.coaching || "",
             metrics: data.metrics || {},
             quality: data.quality,
             partial: data.partial,
             latencyMs: data.latency_ms
         });
+        return;
+    }
+
+    // The phrased sentence for a rep already on screen. It replaces the
+    // placeholder line and fills in the feed item for that rep.
+    if (data.type === "cue") {
+        lastCoaching = data.coaching || "";
+        CoachUI.applyCue(data.rep, data.coaching, data.latency_ms);
         return;
     }
 
@@ -169,9 +175,9 @@ function maybeSendLandmarks(landmarks) {
     const payload = landmarks.map(p => ({
         x: p.x, y: p.y, z: p.z, visibility: p.visibility
     }));
-    // The wall-clock stamp travels with the frame and comes back on the rep
-    // message, which is what makes true end-to-end latency measurable rather
-    // than inferred from the backend's own processing time.
+    // The wall-clock stamp travels with the frame and comes back on both the
+    // verdict and the cue, which is what makes the two stages separately
+    // measurable rather than inferred from the backend's own timings.
     send({
         type: "frame",
         exercise: exerciseSelect.value,

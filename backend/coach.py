@@ -119,3 +119,22 @@ def _fallback(verdict):
     if not faults:
         return f"{_label(verdict)} {n}: great form, keep it up."
     return f"{_label(verdict)} {n}: " + " and ".join(cue for cue, _ in faults) + "."
+
+
+async def warm_up():
+    """Trigger the model's one-off load before the first user rep.
+
+    The first generation of a session cost about 2.5 seconds against 700 to
+    900 ms warm. That cost belongs to the server starting, not to the user's
+    first repetition, so it is paid here.
+    """
+    try:
+        from ollama import AsyncClient
+        await AsyncClient().chat(
+            model=MODEL,
+            messages=[{"role": "user", "content": "Reply with: ready"}],
+            options={"temperature": 0.0, "num_predict": 4},
+        )
+        print(f"{MODEL} warmed up")
+    except Exception as e:
+        print(f"Warm-up skipped, model unavailable: {e}")

@@ -330,6 +330,9 @@
         li.className = "feed-item is-new";
         li.setAttribute("data-verdict", rep.verdict);
 
+        li.dataset.rep = rep.rep;
+        if (!rep.text) li.dataset.pending = "1";
+
         const idx = document.createElement("span");
         idx.className = "feed-index";
         idx.textContent = rep.rep;
@@ -446,7 +449,10 @@
 
             this.setReps(rep.rep);
             this.setExercise(exercise);
-            this.setCoaching(rep.text || (verdict === "good" ? "Clean rep." : "Adjust your form."), verdict);
+            const placeholder = verdict === "good"
+                ? "Clean rep."
+                : rep.faults.map(faultLabel).join(" / ");
+            this.setCoaching(rep.text || placeholder, verdict);
 
             if (verdict === "good") state.good += 1; else state.fault += 1;
             if (el.tallyGood) el.tallyGood.textContent = state.good;
@@ -467,6 +473,37 @@
 
             this.hideHint();
             return rep;
+        },
+
+        applyCue(rep, text, latencyMs) {
+            if (text) this.setCoaching(text);
+            if (!el.feed) return;
+
+            const item = el.feed.querySelector('[data-rep="' + rep + '"]');
+            if (!item) return;
+
+            if (text) {
+                let p = item.querySelector(".feed-text");
+                if (!p) {
+                    p = document.createElement("p");
+                    p.className = "feed-text";
+                    item.insertBefore(p, item.querySelector(".feed-metrics"));
+                }
+                p.textContent = text;
+            }
+
+            if (typeof latencyMs === "number") {
+                let lat = item.querySelector(".feed-latency");
+                if (!lat) {
+                    lat = document.createElement("span");
+                    lat.className = "feed-latency";
+                    const head = item.querySelector(".feed-head");
+                    if (head) head.appendChild(lat);
+                }
+                lat.textContent = (latencyMs / 1000).toFixed(1) + "s";
+            }
+
+            item.removeAttribute("data-pending");
         },
 
         reset() {

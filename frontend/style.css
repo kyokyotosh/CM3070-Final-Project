@@ -555,6 +555,10 @@ html[data-theme="light"] .icon-sun {
     border-top: 1px solid var(--line);
 }
 
+.feed-item[data-pending] {
+    opacity: .78;
+}
+
 .feed-item:first-child {
     border-top: none;
     padding-top: 2px;
