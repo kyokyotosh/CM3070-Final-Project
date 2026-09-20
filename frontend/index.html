@@ -1,43 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Calisthenics Coach</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <header>
-        <h1>Calisthenics Coach</h1>
-        <p>Real-time form feedback for bodyweight exercise</p>
+    <header class="topbar">
+        <div class="brand">
+            <h1>Calisthenics Coach</h1>
+            <p>Real-time form feedback for bodyweight exercise</p>
+        </div>
+
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light theme">
+            <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2" />
+                <path
+                    d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9" />
+            </svg>
+            <span class="theme-toggle-label">Light</span>
+        </button>
     </header>
 
-    <main>
-        <section id="controls">
-            <label for="exercise-select">Exercise:</label>
-            <select id="exercise-select">
-                <option value="squat">Squat</option>
-                <option value="lunge">Lunge</option>
-            </select>
+    <main class="stage">
+
+        <!-- Left column controls, camera, and the last feedback -->
+        <section class="camera-col">
+
+            <div class="controls">
+                <label for="exercise-select">Exercise</label>
+                <select id="exercise-select">
+                    <option value="squat">Squat</option>
+                    <option value="lunge">Forward lunge</option>
+                </select>
+
+                <span class="connection" id="conn-status" data-state="connecting">
+                    <i aria-hidden="true"></i><span id="conn-label">Connecting</span>
+                </span>
+            </div>
+
+            <div class="viewport">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="overlay"></canvas>
+                <p class="viewport-hint" id="viewport-hint">Stand back until your whole body is in frame.</p>
+            </div>
+
+            <div class="last-feedback" id="last-feedback" data-verdict="idle">
+                <span class="verdict-tag" id="last-verdict">Ready</span>
+                <p class="last-feedback-text" id="coaching-text">Waiting to start.</p>
+            </div>
+
         </section>
 
-        <section id="camera">
-            <video id="webcam" autoplay playsinline></video>
-            <canvas id="overlay"></canvas>
-        </section>
+        <!-- Right panel about the session -->
+        <aside class="panel">
 
-        <section id="feedback">
-            <p id="rep-count">Reps: 0</p>
-            <p id="coaching-text">Waiting to start...</p>
-        </section>
+            <div class="panel-block block-count">
+                <p class="count"><span id="rep-count">0</span></p>
+                <p class="count-meta">
+                    <span id="count-word">reps</span>
+                    <span class="sep" aria-hidden="true"></span>
+                    <span id="session-exercise">squat</span>
+                    <span class="sep" aria-hidden="true"></span>
+                    <time id="session-time">0:00</time>
+                </p>
+                <p class="tally">
+                    <span class="tally-good"><b id="tally-good">0</b> clean</span>
+                    <span class="tally-fault"><b id="tally-fault">0</b> to fix</span>
+                </p>
+            </div>
+
+            <div class="panel-block block-graph">
+                <div class="block-head">
+                    <h2>Rep quality</h2>
+                    <span class="block-value" id="quality-latest">&mdash;</span>
+                </div>
+
+                <svg class="graph" id="quality-graph" viewBox="0 0 320 96" preserveAspectRatio="none" role="img"
+                    aria-label="Quality score of recent repetitions">
+                    <defs>
+                        <linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" class="grad-top" />
+                            <stop offset="100%" class="grad-bottom" />
+                        </linearGradient>
+                    </defs>
+                    <rect class="graph-band" x="0" y="0" width="320" height="28.8" />
+                    <line class="graph-threshold" x1="0" y1="28.8" x2="320" y2="28.8" />
+                    <path class="graph-area" id="graph-area" d="" />
+                    <path class="graph-line" id="graph-line" d="" />
+                    <g id="graph-dots"></g>
+                </svg>
+
+                <p class="graph-legend">
+                    <span id="graph-caption">Waiting for the first rep</span>
+                    <span class="graph-scale">0&ndash;100</span>
+                </p>
+            </div>
+
+            <div class="panel-block block-feed">
+                <div class="block-head">
+                    <h2>Feedback feed</h2>
+                    <button type="button" class="ghost-btn" id="clear-feed">Clear</button>
+                </div>
+
+                <ol class="feed" id="feedback-feed"></ol>
+                <p class="feed-empty" id="feed-empty">Each repetition lands here with its verdict and the coaching
+                    line that went with it.</p>
+            </div>
+
+        </aside>
+
     </main>
 
-    <footer>
-        <p>CM3070 Final Project</p>
+    <footer class="footer">
+        <p>CM3070 Final Project. Matheus Colombo, University of London</p>
     </footer>
 
+    <script src="ui.js"></script>
     <script type="module" src="main.js"></script>
 </body>
 
