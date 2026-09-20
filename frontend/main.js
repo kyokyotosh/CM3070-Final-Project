@@ -7,8 +7,6 @@ import {
 const video = document.getElementById("webcam");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
-const coachingText = document.getElementById("coaching-text");
-const repCount = document.getElementById("rep-count");
 const exerciseSelect = document.getElementById("exercise-select");
 
 let poseLandmarker = null;
@@ -18,19 +16,56 @@ let lastSendTime = 0;
 const socket = new WebSocket("ws://localhost:8765");
 
 socket.addEventListener("open", () => {
-    console.log("Connected to backend");
+    CoachUI.setStatus("live");
 });
 
 socket.addEventListener("error", () => {
-    coachingText.textContent = "Backend not connected. Start the Python server.";
+    CoachUI.setStatus("offline");
+    CoachUI.setCoaching("Backend not connected. Start the Python server.");
 });
+
+socket.addEventListener("close", () => {
+    CoachUI.setStatus("offline", "Backend disconnected");
+});
+
+let lastRepSeen = 0;
+let lastCoaching = "";
+
+// The backend may report faults as a list or as a flag object; both end up
+// as a list of identifiers here.
+function normaliseFaults(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "object") return Object.keys(raw).filter(k => raw[k]);
+    return [raw];
+}
 
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
-    if (typeof data.reps === "number") {
-        repCount.textContent = "Reps: " + data.reps;
+    console.log("verdict payload", data);   // temporary
+
+    const reps = typeof data.reps === "number" ? data.reps : null;
+
+    // A completed repetition: one feed item, one graph point.
+    if (reps !== null && reps > lastRepSeen) {
+        lastRepSeen = reps;
+        lastCoaching = data.coaching || "";
+        CoachUI.pushRep({
+            rep: reps,
+            exercise: exerciseSelect.value,
+            faults: normaliseFaults(data.faults),
+            text: data.coaching || "",
+            metrics: data.angles || data.metrics || {},
+            latencyMs: data.latency_ms
+        });
+        return;
     }
-    coachingText.textContent = data.coaching;
+
+    // Anything else is live status text, not a rep.
+    if (data.coaching && data.coaching !== lastCoaching) {
+        lastCoaching = data.coaching;
+        CoachUI.setCoaching(data.coaching);
+    }
 });
 
 async function createPoseLandmarker() {
@@ -46,7 +81,7 @@ async function createPoseLandmarker() {
         runningMode: "VIDEO",
         numPoses: 1
     });
-    coachingText.textContent = "Model loaded.";
+    CoachUI.setCoaching("Model loaded.");
 }
 
 async function startCamera() {
@@ -58,7 +93,7 @@ async function startCamera() {
         video.srcObject = stream;
         video.addEventListener("loadeddata", predictLoop);
     } catch (err) {
-        coachingText.textContent = "Could not access camera. Please allow camera access and reload.";
+        CoachUI.setCoaching("Could not access camera. Please allow camera access and reload.");
         console.error(err);
     }
 }
@@ -78,15 +113,33 @@ function predictLoop() {
     requestAnimationFrame(predictLoop);
 }
 
+let overlayTheme = null;
+let overlayInk = null;
+
+function overlayColours() {
+    const theme = document.documentElement.getAttribute("data-theme");
+    if (theme !== overlayTheme) {
+        const cs = getComputedStyle(document.documentElement);
+        overlayInk = {
+            bone: cs.getPropertyValue("--ink").trim(),
+            joint: cs.getPropertyValue("--good-ink").trim()
+        };
+        overlayTheme = theme;
+    }
+    return overlayInk;
+}
+
 function drawResult(result) {
     const utils = new DrawingUtils(ctx);
+    const c = overlayColours();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (result.landmarks) {
         for (const landmarks of result.landmarks) {
-            utils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "rgb(0, 255, 0)", lineWidth: 2 });
-            utils.drawLandmarks(landmarks, { radius: 3, color: "rgb(255, 0, 0)" });
+            utils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: c.bone, lineWidth: 2 });
+            utils.drawLandmarks(landmarks, { radius: 3, color: c.joint });
             maybeSendLandmarks(landmarks);
         }
+        if (result.landmarks.length) CoachUI.hideHint();
     }
 }
 
@@ -106,7 +159,7 @@ function maybeSendLandmarks(landmarks) {
 }
 
 createPoseLandmarker().catch(err => {
-    coachingText.textContent = "Model failed to load: " + err.message;
+    CoachUI.setCoaching("Model failed to load: " + err.message);
     console.error(err);
 });
 startCamera();
