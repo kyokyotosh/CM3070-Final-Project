@@ -1,0 +1,5 @@
+client_ts,server_ts,exercise,rep,faults,faults_cued,depth_ok,trunk_ok,knee_travel_ok,min_knee,max_trunk,max_knee_travel,quality,partial,analysis_ms,llm_ms,server_ms,end_to_end_ms,coaching
+1789942633116,1789942635681.9,squat,1,shallow_depth,squat a little deeper,False,True,,107.8,24.3,,72,False,0.1,2564.0,2564.1,2565.9,"Next rep, focus on lowering down to a full parallel, keeping your knees behind your toes."
+1789942633966,1789942636542.4,squat,2,shallow_depth,squat a little deeper,False,True,,106.0,23.9,,74,False,0.0,859.3,859.4,2576.4,"Great effort, remember to lower down to parallel and engage your core for the next rep."
+1789942634871,1789942637284.7,squat,3,shallow_depth,squat a little deeper,False,True,,101.4,25.8,,79,False,0.1,739.9,740.0,2413.7,"Great effort, remember to lower down to parallel depth for the next rep."
+1789942640432,1789942641251.8,squat,4,shallow_depth,squat a little deeper,False,True,,96.6,27.9,,83,False,0.1,818.3,818.4,819.8,"Great effort, remember to lower down to a full parallel position for maximum benefit."

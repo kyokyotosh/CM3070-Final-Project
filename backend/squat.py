@@ -6,6 +6,12 @@ PARALLEL = 95.0        # knee angle at/below this counts as full depth
 TRUNK_MAX = 50.0       # trunk lean above this flags excessive forward lean
 MIN_VISIBILITY = 0.5   # below this, the reading is not trusted
 
+# Physically implausible knee readings (a fully folded shin) come from bad
+# frames, not real movement. An observed 9.2 degree reading passed depth by
+# polluting the per-rep minimum, the same defect class as the lunge floor and
+# the trunk visibility gate.
+KNEE_MIN_PLAUSIBLE = 30.0
+
 
 class SquatAnalyzer:
     """Deterministic squat rep counter and form diagnoser.
@@ -35,6 +41,12 @@ class SquatAnalyzer:
             return self._status("Step back so your legs are clearly visible."), None
 
         knee = angles["knee"]
+
+        # Drop an implausible knee frame rather than letting it advance the
+        # state machine or pollute the per-rep minimum.
+        if knee < KNEE_MIN_PLAUSIBLE:
+            return self._status(), None
+
         trunk = angles["trunk_lean"]
         trunk_valid = angles.get("trunk_valid", trunk is not None)
 
