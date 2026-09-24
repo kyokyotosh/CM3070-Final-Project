@@ -1,0 +1,45 @@
+checkpoint stgcn_ntu60.pth
+  loaded          179 tensors
+  new head        ['classifier.bias', 'classifier.weight']
+  ignored         2 (e.g. ['cls_head.fc.weight', 'cls_head.fc.bias'])
+  every parameter below the head came from the checkpoint
+
+device mps | 1,579,465 trainable of 3,074,055 total | 8 of 10 blocks frozen
+normalisation image | window 30 frames (2.0 s) | stride 5
+1835 windows from 16 sessions
+  squat    700 windows  6 sessions   38.1%
+  lunge    570 windows  5 sessions   31.1%
+  other    565 windows  5 sessions   30.8%
+
+  ok lunge-20260924-185356        lunge  window acc  0.991  session vote lunge
+  ok lunge-20260924-185516        lunge  window acc  0.867  session vote lunge
+  XX lunge-20260924-185652        lunge  window acc  0.348  session vote squat
+  ok lunge-20260924-191533        lunge  window acc  0.944  session vote lunge
+  ok lunge-20260924-194729        lunge  window acc  0.816  session vote lunge
+  ok other-20260924-191622        other  window acc  0.941  session vote other
+  ok other-20260924-191711        other  window acc  0.877  session vote other
+  ok other-20260924-191812        other  window acc  0.937  session vote other
+  ok other-20260924-191910        other  window acc  0.983  session vote other
+  ok other-20260924-194829        other  window acc  0.938  session vote other
+  ok squat-20260924-184559        squat  window acc  0.993  session vote squat
+  ok squat-20260924-184726        squat  window acc  0.982  session vote squat
+  ok squat-20260924-184917        squat  window acc  1.000  session vote squat
+  ok squat-20260924-185024        squat  window acc  0.959  session vote squat
+  ok squat-20260924-185134        squat  window acc  0.892  session vote squat
+  ok squat-20260924-185226        squat  window acc  0.907  session vote squat
+
+actual\predicted     squat    lunge    other
+squat                  670       23        7
+lunge                  102      452       16
+other                   20       17      528
+
+class     precision   recall      f1  support
+squat         0.846    0.957   0.898      700
+lunge         0.919    0.793   0.851      570
+other         0.958    0.935   0.946      565
+
+accuracy 0.899   macro F1 0.899
+
+session-level: 15/16 sessions correctly identified by majority vote
+cross-validation took 971 s
+results written to cv_freeze8.json

@@ -1,0 +1,314 @@
+{
+  "checkpoint": "stgcn_ntu60.pth",
+  "frozen_blocks": 10,
+  "normalisation": "image",
+  "window": 30,
+  "stride": 5,
+  "epochs": 25,
+  "accuracy": 0.7525885558583106,
+  "confusion": [
+    [
+      526,
+      99,
+      75
+    ],
+    [
+      94,
+      410,
+      66
+    ],
+    [
+      42,
+      78,
+      445
+    ]
+  ],
+  "classes": [
+    "squat",
+    "lunge",
+    "other"
+  ],
+  "per_class": [
+    {
+      "class": "squat",
+      "precision": 0.7945619335347432,
+      "recall": 0.7514285714285714,
+      "f1": 0.7723935389133627,
+      "support": 700
+    },
+    {
+      "class": "lunge",
+      "precision": 0.6984667802385008,
+      "recall": 0.7192982456140351,
+      "f1": 0.7087294727744167,
+      "support": 570
+    },
+    {
+      "class": "other",
+      "precision": 0.7593856655290102,
+      "recall": 0.7876106194690266,
+      "f1": 0.7732406602953953,
+      "support": 565
+    }
+  ],
+  "folds": [
+    {
+      "session": "lunge-20260924-185356",
+      "true_class": "lunge",
+      "windows": 116,
+      "accuracy": 0.7068965517241379,
+      "session_vote": "lunge",
+      "vote_correct": true
+    },
+    {
+      "session": "lunge-20260924-185516",
+      "true_class": "lunge",
+      "windows": 128,
+      "accuracy": 0.8671875,
+      "session_vote": "lunge",
+      "vote_correct": true
+    },
+    {
+      "session": "lunge-20260924-185652",
+      "true_class": "lunge",
+      "windows": 115,
+      "accuracy": 0.2782608695652174,
+      "session_vote": "squat",
+      "vote_correct": false
+    },
+    {
+      "session": "lunge-20260924-191533",
+      "true_class": "lunge",
+      "windows": 108,
+      "accuracy": 0.9259259259259259,
+      "session_vote": "lunge",
+      "vote_correct": true
+    },
+    {
+      "session": "lunge-20260924-194729",
+      "true_class": "lunge",
+      "windows": 103,
+      "accuracy": 0.8252427184466019,
+      "session_vote": "lunge",
+      "vote_correct": true
+    },
+    {
+      "session": "other-20260924-191622",
+      "true_class": "other",
+      "windows": 101,
+      "accuracy": 0.8316831683168316,
+      "session_vote": "other",
+      "vote_correct": true
+    },
+    {
+      "session": "other-20260924-191711",
+      "true_class": "other",
+      "windows": 122,
+      "accuracy": 0.7622950819672131,
+      "session_vote": "other",
+      "vote_correct": true
+    },
+    {
+      "session": "other-20260924-191812",
+      "true_class": "other",
+      "windows": 111,
+      "accuracy": 0.8468468468468469,
+      "session_vote": "other",
+      "vote_correct": true
+    },
+    {
+      "session": "other-20260924-191910",
+      "true_class": "other",
+      "windows": 119,
+      "accuracy": 0.7226890756302521,
+      "session_vote": "other",
+      "vote_correct": true
+    },
+    {
+      "session": "other-20260924-194829",
+      "true_class": "other",
+      "windows": 112,
+      "accuracy": 0.7857142857142857,
+      "session_vote": "other",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-184559",
+      "true_class": "squat",
+      "windows": 135,
+      "accuracy": 0.6592592592592592,
+      "session_vote": "squat",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-184726",
+      "true_class": "squat",
+      "windows": 111,
+      "accuracy": 0.7657657657657657,
+      "session_vote": "squat",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-184917",
+      "true_class": "squat",
+      "windows": 114,
+      "accuracy": 0.8157894736842105,
+      "session_vote": "squat",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-185024",
+      "true_class": "squat",
+      "windows": 122,
+      "accuracy": 0.7377049180327869,
+      "session_vote": "squat",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-185134",
+      "true_class": "squat",
+      "windows": 111,
+      "accuracy": 0.7657657657657657,
+      "session_vote": "squat",
+      "vote_correct": true
+    },
+    {
+      "session": "squat-20260924-185226",
+      "true_class": "squat",
+      "windows": 107,
+      "accuracy": 0.7850467289719626,
+      "session_vote": "squat",
+      "vote_correct": true
+    }
+  ],
+  "sessions": [
+    {
+      "session_id": "lunge-20260924-185356",
+      "label": "lunge",
+      "distance": "near",
+      "lighting": "bright",
+      "frame_count": 605,
+      "windows": 116
+    },
+    {
+      "session_id": "lunge-20260924-185516",
+      "label": "lunge",
+      "distance": "far",
+      "lighting": "bright",
+      "frame_count": 668,
+      "windows": 128
+    },
+    {
+      "session_id": "lunge-20260924-185652",
+      "label": "lunge",
+      "distance": "near",
+      "lighting": "dim",
+      "frame_count": 602,
+      "windows": 115
+    },
+    {
+      "session_id": "lunge-20260924-191533",
+      "label": "lunge",
+      "distance": "near",
+      "lighting": "dim",
+      "frame_count": 569,
+      "windows": 108
+    },
+    {
+      "session_id": "lunge-20260924-194729",
+      "label": "lunge",
+      "distance": "far",
+      "lighting": "dim",
+      "frame_count": 543,
+      "windows": 103
+    },
+    {
+      "session_id": "other-20260924-191622",
+      "label": "other",
+      "distance": "near",
+      "lighting": "bright",
+      "frame_count": 531,
+      "windows": 101
+    },
+    {
+      "session_id": "other-20260924-191711",
+      "label": "other",
+      "distance": "far",
+      "lighting": "dim",
+      "frame_count": 639,
+      "windows": 122
+    },
+    {
+      "session_id": "other-20260924-191812",
+      "label": "other",
+      "distance": "near",
+      "lighting": "bright",
+      "frame_count": 583,
+      "windows": 111
+    },
+    {
+      "session_id": "other-20260924-191910",
+      "label": "other",
+      "distance": "far",
+      "lighting": "bright",
+      "frame_count": 621,
+      "windows": 119
+    },
+    {
+      "session_id": "other-20260924-194829",
+      "label": "other",
+      "distance": "near",
+      "lighting": "dim",
+      "frame_count": 588,
+      "windows": 112
+    },
+    {
+      "session_id": "squat-20260924-184559",
+      "label": "squat",
+      "distance": "near",
+      "lighting": "bright",
+      "frame_count": 703,
+      "windows": 135
+    },
+    {
+      "session_id": "squat-20260924-184726",
+      "label": "squat",
+      "distance": "far",
+      "lighting": "bright",
+      "frame_count": 584,
+      "windows": 111
+    },
+    {
+      "session_id": "squat-20260924-184917",
+      "label": "squat",
+      "distance": "far",
+      "lighting": "dim",
+      "frame_count": 597,
+      "windows": 114
+    },
+    {
+      "session_id": "squat-20260924-185024",
+      "label": "squat",
+      "distance": "near",
+      "lighting": "dim",
+      "frame_count": 638,
+      "windows": 122
+    },
+    {
+      "session_id": "squat-20260924-185134",
+      "label": "squat",
+      "distance": "near",
+      "lighting": "bright",
+      "frame_count": 583,
+      "windows": 111
+    },
+    {
+      "session_id": "squat-20260924-185226",
+      "label": "squat",
+      "distance": "far",
+      "lighting": "bright",
+      "frame_count": 563,
+      "windows": 107
+    }
+  ]
+}
