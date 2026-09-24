@@ -9,11 +9,10 @@ const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
 const exerciseSelect = document.getElementById("exercise-select");
 
-// Landmarks are streamed at 15 Hz. The form analyser does not need this
-// rate and the server samples every third frame for it, keeping the 200 ms
-// analysis interval the thresholds were calibrated against. The higher rate
-// exists for the action recogniser, which needs the shape of the movement
-// over time rather than threshold crossings.
+// Landmarks are streamed at 15 Hz. The exercise recogniser was trained at
+// that rate and needs every frame; the server samples every third frame for
+// form analysis, preserving the 200 ms interval its thresholds were
+// calibrated against.
 const SEND_INTERVAL_MS = 1000 / 15;
 
 let poseLandmarker = null;
@@ -45,9 +44,13 @@ function send(payload) {
 socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
 
+    // Every message carries what the recogniser currently believes, so the
+    // readout stays live whether or not a rep just completed.
+    CoachUI.setDetection(data.detected, data.detect_confidence,
+        data.mode, data.suppressed);
+
     // A completed repetition. Everything here was decided by the rule layer,
-    // so it arrives as soon as the rep ends: the verdict, the measurements
-    // behind it, and the quality score. The wording follows separately.
+    // so it arrives as soon as the rep ends. The wording follows separately.
     if (data.type === "rep") {
         CoachUI.pushRep({
             rep: data.rep,
@@ -61,15 +64,13 @@ socket.addEventListener("message", (event) => {
         return;
     }
 
-    // The phrased sentence for a rep already on screen. It replaces the
-    // placeholder line and fills in the feed item for that rep.
+    // The phrased sentence for a rep already on screen.
     if (data.type === "cue") {
         lastCoaching = data.coaching || "";
         CoachUI.applyCue(data.rep, data.coaching, data.latency_ms);
         return;
     }
 
-    // Anything else is live status text, not a rep.
     if (data.exercise) CoachUI.setExercise(data.exercise);
     if (data.coaching && data.coaching !== lastCoaching) {
         lastCoaching = data.coaching;
@@ -77,8 +78,8 @@ socket.addEventListener("message", (event) => {
     }
 });
 
-// Switching exercise rebuilds the analyser on the backend, which restarts the
-// rep count. The panel is cleared here so both ends agree about the session.
+// Switching mode rebuilds the analyser on the backend, which restarts the rep
+// count. The panel is cleared here so both ends agree about the session.
 if (exerciseSelect) {
     exerciseSelect.addEventListener("change", () => {
         CoachUI.reset();
@@ -86,8 +87,6 @@ if (exerciseSelect) {
     });
 }
 
-// Clearing the feed is a session reset, not only a repaint: without telling
-// the backend, its rep counter would carry on from where it left off.
 CoachUI.onReset = () => {
     send({ type: "reset", exercise: exerciseSelect ? exerciseSelect.value : "squat" });
 };

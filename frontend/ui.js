@@ -1,18 +1,23 @@
 /* ==========================================================================
    interface layer
    --------------------------------------------------------------------------
-   This file owns presentation only. It never decides whether a rep was good:
-   it renders verdicts that arrive from the backend, in keeping with the
-   rule-based analysis layer being the single diagnostic authority.
+   This file owns presentation only. It never decides whether a rep was good,
+   and it no longer scores one either: verdicts, measurements and the quality
+   score all arrive from the backend, in keeping with the rule-based analysis
+   layer being the single diagnostic authority.
 
    main.js talks to it through window.CoachUI:
 
      CoachUI.setStatus("live" | "connecting" | "offline", label?)
      CoachUI.setExercise("squat")
+     CoachUI.setDetection(label, confidence, mode, suppressed)
      CoachUI.setReps(12)
      CoachUI.setCoaching("text")                 // updates the big line only
-     CoachUI.pushRep({ rep, exercise, faults, text, metrics, latencyMs })
+     CoachUI.pushRep({ rep, exercise, faults, metrics, quality, partial,
+                       latencyMs })              // verdict, arrives at once
+     CoachUI.applyCue(rep, text, latencyMs)      // wording, arrives later
      CoachUI.reset()
+     CoachUI.onReset                             // set by main.js, called on Clear
    ========================================================================== */
 
 (function () {
@@ -47,7 +52,9 @@
         graphCaption: $("graph-caption"),
         feed: $("feedback-feed"),
         feedEmpty: $("feed-empty"),
-        clearFeed: $("clear-feed")
+        clearFeed: $("clear-feed"),
+        detected: $("detected-label"),
+        detectConf: $("detect-confidence")
     };
 
     /* ------------------------------------------------------------- theme -- */
@@ -129,15 +136,23 @@
         short_stride: "Stride too short"
     };
 
-    // Metric keys mapped to a short label, a unit, and the calibrated threshold
-    // they are judged against, so a breached value can be marked in the chip.
+    // The backend names exercises "squat" and "lunge"; these are the words
+    // shown to the person. Kept separate so the wire format and the wording
+    // can differ without one leaking into the other.
+    const EXERCISE_LABELS = {
+        squat: "squat",
+        lunge: "forward lunge",
+        auto: "detecting"
+    };
+
+    // Metric keys mapped to a short label and a unit.
     const METRIC_SPECS = {
-        knee_angle: { label: "Knee", unit: "\u00B0", digits: 0 },
-        min_knee_angle: { label: "Depth", unit: "\u00B0", digits: 0 },
-        depth: { label: "Depth", unit: "\u00B0", digits: 0 },
-        trunk_angle: { label: "Trunk", unit: "\u00B0", digits: 0 },
-        max_trunk_angle: { label: "Trunk", unit: "\u00B0", digits: 0 },
-        trunk_lean: { label: "Trunk", unit: "\u00B0", digits: 0 },
+        knee_angle: { label: "Knee", unit: "°", digits: 0 },
+        min_knee_angle: { label: "Depth", unit: "°", digits: 0 },
+        depth: { label: "Depth", unit: "°", digits: 0 },
+        trunk_angle: { label: "Trunk", unit: "°", digits: 0 },
+        max_trunk_angle: { label: "Trunk", unit: "°", digits: 0 },
+        trunk_lean: { label: "Trunk", unit: "°", digits: 0 },
         knee_travel: { label: "Knee travel", unit: "", digits: 2 },
         rep_duration: { label: "Duration", unit: "s", digits: 1 },
         tempo: { label: "Tempo", unit: "s", digits: 1 }
@@ -152,54 +167,6 @@
         if (typeof fault === "object") fault = fault.name || fault.fault || fault.id || "";
         const key = String(fault).toLowerCase();
         return FAULT_LABELS[key] || humanise(key);
-    }
-
-    /* ---------------------------------------------------------- quality -- */
-
-    /*  PLACEHOLDER SCORE.
-        The backend does not emit a quality score yet. Until it does, the graph
-        is driven by this local estimate: a clean rep scores 100, and each fault
-        costs a penalty scaled by how far the offending metric sits past its
-        calibrated threshold. Thresholds match the values calibrated from real
-        reps. Replace this by sending `quality` in the verdict payload. */
-    const THRESHOLDS = {
-        squat: { depth: 95, trunk: 50, travel: 0.15 },
-        lunge: { depth: 110, trunk: 20, travel: 0.15 }
-    };
-
-    function estimateQuality(faults, metrics, exercise) {
-        if (!faults || faults.length === 0) return 100;
-
-        const t = THRESHOLDS[exercise] || THRESHOLDS.squat;
-        const m = metrics || {};
-        let score = 100;
-
-        faults.forEach((raw) => {
-            const key = String(
-                typeof raw === "object" ? (raw.name || raw.fault || "") : raw
-            ).toLowerCase();
-            let penalty = 24;
-
-            if (key.indexOf("depth") !== -1) {
-                const v = m.min_knee_angle ?? m.knee_angle ?? m.depth;
-                if (typeof v === "number") {
-                    penalty = 14 + Math.min(26, Math.abs(v - t.depth) * 1.1);
-                }
-            } else if (key.indexOf("trunk") !== -1) {
-                const v = m.max_trunk_angle ?? m.trunk_angle ?? m.trunk_lean;
-                if (typeof v === "number") {
-                    penalty = 14 + Math.min(26, Math.abs(v - t.trunk) * 1.3);
-                }
-            } else if (key.indexOf("knee") !== -1 || key.indexOf("travel") !== -1) {
-                const v = m.knee_travel;
-                if (typeof v === "number") {
-                    penalty = 14 + Math.min(26, Math.abs(v - t.travel) * 110);
-                }
-            }
-            score -= penalty;
-        });
-
-        return Math.max(20, Math.round(score));
     }
 
     /* ------------------------------------------------------------ graph -- */
@@ -330,6 +297,8 @@
         li.className = "feed-item is-new";
         li.setAttribute("data-verdict", rep.verdict);
 
+        // The verdict arrives before its wording, so the item is tagged with
+        // its rep number and marked pending until applyCue fills the text in.
         li.dataset.rep = rep.rep;
         if (!rep.text) li.dataset.pending = "1";
 
@@ -364,7 +333,8 @@
         }
 
         const metrics = rep.metrics || {};
-        const keys = Object.keys(metrics).filter((k) => metrics[k] !== null && metrics[k] !== undefined);
+        const keys = Object.keys(metrics).filter(
+            (k) => metrics[k] !== null && metrics[k] !== undefined);
         if (keys.length) {
             const wrap = document.createElement("div");
             wrap.className = "feed-metrics";
@@ -381,6 +351,10 @@
     /* -------------------------------------------------------------- api -- */
 
     const CoachUI = {
+
+        // Set by main.js. Clearing the feed is a session reset, so the
+        // backend has to be told, or its rep counter carries on.
+        onReset: null,
 
         setStatus(stateName, label) {
             if (!el.conn) return;
@@ -404,7 +378,32 @@
         },
 
         setExercise(name) {
-            if (el.sessionExercise) el.sessionExercise.textContent = name;
+            if (!el.sessionExercise) return;
+            el.sessionExercise.textContent = EXERCISE_LABELS[name] || name;
+        },
+
+        // What the recogniser currently believes. In manual mode this is
+        // reported but never acts, so the readout says so rather than
+        // implying the detection is driving anything.
+        setDetection(label, confidence, mode, suppressed) {
+            if (!el.detected) return;
+
+            if (!label) {
+                el.detected.textContent = mode === "auto" ? "detecting" : "off";
+                if (el.detectConf) el.detectConf.textContent = "";
+                return;
+            }
+
+            let text = EXERCISE_LABELS[label] || label;
+            if (suppressed) text += " (paused)";
+            if (mode && mode !== "auto") text += " (manual)";
+            el.detected.textContent = text;
+
+            if (el.detectConf) {
+                el.detectConf.textContent = typeof confidence === "number"
+                    ? Math.round(confidence * 100) + "%"
+                    : "";
+            }
         },
 
         setReps(n) {
@@ -440,15 +439,20 @@
                 text: payload.text || "",
                 metrics: payload.metrics || {},
                 latencyMs: payload.latencyMs,
-                quality: typeof payload.quality === "number"
-                    ? payload.quality
-                    : estimateQuality(faults, payload.metrics, exercise)
+                // Scored by the rule layer. If it is missing, the rep is
+                // shown without a graph point rather than given an invented
+                // score here.
+                quality: typeof payload.quality === "number" ? payload.quality : null,
+                partial: !!payload.partial
             };
 
             if (!state.startedAt) state.startedAt = Date.now();
 
             this.setReps(rep.rep);
             this.setExercise(exercise);
+
+            // Until the phrased cue arrives, the rule layer's own fault names
+            // stand in, so the line is never blank or stale.
             const placeholder = verdict === "good"
                 ? "Clean rep."
                 : rep.faults.map(faultLabel).join(" / ");
@@ -458,8 +462,10 @@
             if (el.tallyGood) el.tallyGood.textContent = state.good;
             if (el.tallyFault) el.tallyFault.textContent = state.fault;
 
-            state.quality.push({ quality: rep.quality, fault: verdict === "fault" });
-            drawGraph();
+            if (typeof rep.quality === "number") {
+                state.quality.push({ quality: rep.quality, fault: verdict === "fault" });
+                drawGraph();
+            }
 
             if (el.feed) {
                 if (el.feedEmpty) el.feedEmpty.hidden = true;
@@ -475,6 +481,8 @@
             return rep;
         },
 
+        // The phrased sentence for a rep already on screen. It replaces the
+        // placeholder line and completes that rep's feed item.
         applyCue(rep, text, latencyMs) {
             if (text) this.setCoaching(text);
             if (!el.feed) return;
@@ -487,6 +495,8 @@
                 if (!p) {
                     p = document.createElement("p");
                     p.className = "feed-text";
+                    // A null reference appends, so this works whether or not
+                    // the item has metric chips.
                     item.insertBefore(p, item.querySelector(".feed-metrics"));
                 }
                 p.textContent = text;
@@ -525,14 +535,16 @@
     };
 
     if (el.clearFeed) {
-        el.clearFeed.addEventListener("click", () => CoachUI.reset());
+        el.clearFeed.addEventListener("click", () => {
+            CoachUI.reset();
+            if (typeof CoachUI.onReset === "function") CoachUI.onReset();
+        });
     }
 
+    // main.js owns the change event, because switching also has to tell the
+    // backend. Only the initial label is set here.
     if (el.exerciseSelect) {
-        el.exerciseSelect.addEventListener("change", (e) => {
-            CoachUI.setExercise(e.target.selectedOptions[0].textContent.toLowerCase());
-        });
-        CoachUI.setExercise(el.exerciseSelect.selectedOptions[0].textContent.toLowerCase());
+        CoachUI.setExercise(el.exerciseSelect.value);
     }
 
     drawGraph();

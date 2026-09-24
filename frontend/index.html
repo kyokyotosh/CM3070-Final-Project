@@ -40,6 +40,7 @@
             <div class="controls">
                 <label for="exercise-select">Exercise</label>
                 <select id="exercise-select">
+                    <option value="auto">Auto (detect)</option>
                     <option value="squat">Squat</option>
                     <option value="lunge">Forward lunge</option>
                 </select>
@@ -73,6 +74,15 @@
                     <span id="session-exercise">squat</span>
                     <span class="sep" aria-hidden="true"></span>
                     <time id="session-time">0:00</time>
+                </p>
+                <!-- What the exercise recogniser currently believes, and how
+                     confidently. Separate from the line above, which is the
+                     analyser actually running. -->
+                <p class="count-meta">
+                    <span>recognised</span>
+                    <span class="sep" aria-hidden="true"></span>
+                    <span id="detected-label">detecting</span>
+                    <span id="detect-confidence"></span>
                 </p>
                 <p class="tally">
                     <span class="tally-good"><b id="tally-good">0</b> clean</span>
