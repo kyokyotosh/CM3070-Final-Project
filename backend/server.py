@@ -54,10 +54,19 @@ LOG_COLUMNS = [
 ]
 
 
-def _make(exercise):
-    analyze, analyzer_cls = EXERCISES.get(
-        exercise, EXERCISES[DEFAULT_EXERCISE])
-    return analyze, analyzer_cls()
+def _make_analyzers():
+    """One analyser per exercise, held for the life of the session.
+
+    Switching exercise selects a different analyser rather than building one,
+    so a switch never discards a rep count. The first version rebuilt on every
+    switch, which meant one spurious detection wiped the set irreversibly: the
+    cost of a false switch has to stay proportional to the mistake.
+    """
+    return {name: (fn, cls()) for name, (fn, cls) in EXERCISES.items()}
+
+
+def _total_reps(analyzers):
+    return sum(analyzer.rep_count for _, analyzer in analyzers.values())
 
 
 def _metrics(verdict):
@@ -160,7 +169,8 @@ async def handler(websocket):
 
     mode = DEFAULT_EXERCISE          # "squat", "lunge" or "auto"
     exercise = DEFAULT_EXERCISE      # the analyser actually running
-    analyze, analyzer = _make(exercise)
+    analyzers = _make_analyzers()
+    analyze, analyzer = analyzers[exercise]
 
     session = {"coaching": "Stand side-on and begin.", "epoch": 0}
 
@@ -207,7 +217,9 @@ async def handler(websocket):
                 mode = requested
                 if mode in EXERCISES:
                     exercise = mode
-                analyze, analyzer = _make(exercise)
+                # An explicit choice by the person starts a fresh session.
+                analyzers = _make_analyzers()
+                analyze, analyzer = analyzers[exercise]
                 session["epoch"] += 1
                 if recogniser:
                     recogniser.reset()
@@ -220,7 +232,8 @@ async def handler(websocket):
                     else f"Switched to {exercise}. Stand side-on and begin.")
 
             if message_type == "reset":
-                analyze, analyzer = _make(exercise)
+                analyzers = _make_analyzers()
+                analyze, analyzer = analyzers[exercise]
                 session["epoch"] += 1
                 if recogniser:
                     recogniser.reset()
@@ -235,7 +248,9 @@ async def handler(websocket):
                     "detected": detected, "detect_confidence": detect_conf,
                     "suppressed": suppressed,
                     "coaching": session["coaching"],
-                    "reps": analyzer.rep_count, "phase": analyzer.phase,
+                    "reps": analyzer.rep_count,
+                    "reps_total": _total_reps(analyzers),
+                    "phase": analyzer.phase,
                 })
                 continue
 
@@ -270,9 +285,14 @@ async def handler(websocket):
                     suppressed = decision["suppressed"]
                     if decision["switched"]:
                         exercise = decision["exercise"]
-                        analyze, analyzer = _make(exercise)
-                        session["epoch"] += 1
-                        session["coaching"] = f"{exercise.capitalize()} detected."
+                        # Select the other analyser, keeping its count. The
+                        # epoch is deliberately not bumped: a cue already
+                        # queued describes a repetition that did happen, and
+                        # discarding it would lose real feedback.
+                        analyze, analyzer = analyzers[exercise]
+                        session["coaching"] = (
+                            f"{exercise.capitalize()} detected, "
+                            f"{analyzer.rep_count} so far.")
                 else:
                     suppressed = False
 
@@ -303,7 +323,9 @@ async def handler(websocket):
                     "detected": detected, "detect_confidence": detect_conf,
                     "suppressed": suppressed,
                     "coaching": session["coaching"],
-                    "reps": status["rep_count"], "phase": status["phase"],
+                    "reps": status["rep_count"],
+                    "reps_total": _total_reps(analyzers),
+                    "phase": status["phase"],
                 })
                 continue
 
@@ -317,6 +339,7 @@ async def handler(websocket):
                 "type": "rep", "mode": mode, "exercise": exercise,
                 "detected": detected, "detect_confidence": detect_conf,
                 "rep": verdict["rep_number"], "reps": status["rep_count"],
+                "reps_total": _total_reps(analyzers),
                 "phase": status["phase"], "faults": faults,
                 "faults_cued": faults_cued, "metrics": _metrics(verdict),
                 "quality": quality, "partial": partial,

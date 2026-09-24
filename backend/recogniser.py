@@ -24,6 +24,7 @@ for it.
 import collections
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -149,46 +150,71 @@ class Recogniser:
 class ExerciseGate:
     """Turn a flickering stream of classifications into stable decisions.
 
-    A decision is taken only when a class holds a majority of the recent
-    window at or above a confidence floor. Switching the analyser additionally
-    requires the current one to be between repetitions, so a switch cannot
-    discard a half-finished rep or reset the count mid-set.
+    Acquiring an exercise and changing it are deliberately not symmetric.
+    Deciding what the person has started is easy: a short majority at modest
+    confidence. Deciding they have switched to a different exercise is hard,
+    because a switch changes which analyser is authoritative, and a spurious
+    one mid-set is worse than a slow correct one. A switch therefore needs a
+    longer majority, higher mean confidence, a gap since the last switch, and
+    the active analyser to be between repetitions.
+
+    Observed confidences fall from about 0.96 early in a set to about 0.73 as
+    form degrades, which is exactly when a single loose threshold starts to
+    flap, so the switch floor sits above that range.
+
+    The third class earns its place here. "other" never selects an analyser;
+    it suppresses verdicts. Sitting down or stretching flexes the knees enough
+    to complete a repetition, and without a way to recognise not-exercising
+    the system would count and coach those.
     """
 
-    def __init__(self, default="squat", history=5, majority=3,
-                 min_confidence=0.6):
+    def __init__(self, default="squat", history=7,
+                 acquire_majority=3, min_confidence=0.6,
+                 switch_majority=5, switch_confidence=0.8,
+                 min_dwell_s=4.0):
         self.exercise = default
         self.history = collections.deque(maxlen=history)
-        self.majority = majority
+
+        self.acquire_majority = acquire_majority
         self.min_confidence = min_confidence
+        self.switch_majority = switch_majority
+        self.switch_confidence = switch_confidence
+        self.min_dwell_s = min_dwell_s
 
         self.detected = None          # last stable class, including "other"
         self.confidence = 0.0
         self.suppressed = False       # True while "other" is the stable class
-        self.pending = None           # class waiting for a gap between reps
+        self.pending = None           # detected, but not yet allowed to switch
+        self.last_switch = 0.0
 
-    def _stable(self):
-        """The class holding a sufficient majority, with its mean confidence."""
-        if len(self.history) < self.majority:
+    def _stable(self, majority, floor):
+        """The class holding `majority` of the recent window at or above
+        `floor` mean confidence, with that mean."""
+        if len(self.history) < majority:
             return None, 0.0
         labels = [label for label, _ in self.history]
         label, count = collections.Counter(labels).most_common(1)[0]
-        if count < self.majority:
+        if count < majority:
             return None, 0.0
         confidences = [c for l, c in self.history if l == label]
         mean = sum(confidences) / len(confidences)
-        if mean < self.min_confidence:
+        if mean < floor:
             return None, mean
         return label, mean
 
-    def update(self, label, confidence, phase):
+    def update(self, label, confidence, phase, now=None):
         """Record one classification and return the resulting decision.
 
         `phase` is the active analyser's state machine phase, "up" between
-        repetitions and "down" during one.
+        repetitions and "down" during one. `now` is injectable so the dwell
+        rule can be tested without waiting.
         """
+        now = time.monotonic() if now is None else now
         self.history.append((label, confidence))
-        stable, mean = self._stable()
+
+        # Reporting and acquisition use the looser test, so the readout stays
+        # responsive even when no switch is warranted.
+        stable, mean = self._stable(self.acquire_majority, self.min_confidence)
 
         result = {
             "detected": self.detected,
@@ -196,6 +222,7 @@ class ExerciseGate:
             "exercise": self.exercise,
             "switched": False,
             "suppressed": self.suppressed,
+            "pending": self.pending,
         }
 
         if stable is None:
@@ -206,8 +233,6 @@ class ExerciseGate:
         result["detected"] = stable
         result["confidence"] = mean
 
-        # "other" never selects an analyser. It withholds verdicts, so that
-        # incidental knee flexion is not coached as a repetition.
         if stable == "other":
             self.suppressed = True
             result["suppressed"] = True
@@ -218,17 +243,26 @@ class ExerciseGate:
 
         if stable == self.exercise:
             self.pending = None
+            result["pending"] = None
             return result
 
-        # A different exercise is being performed. Wait for a gap between
-        # repetitions before switching, because switching rebuilds the
-        # analyser and restarts the count.
-        self.pending = stable
-        if phase == "up":
-            self.exercise = stable
-            self.pending = None
-            result["exercise"] = stable
-            result["switched"] = True
+        # A different exercise. Every one of these must hold before the
+        # authoritative analyser changes.
+        strict, _ = self._stable(self.switch_majority, self.switch_confidence)
+        blocked = (strict != stable
+                   or now - self.last_switch < self.min_dwell_s
+                   or phase != "up")
+        if blocked:
+            self.pending = stable
+            result["pending"] = stable
+            return result
+
+        self.exercise = stable
+        self.last_switch = now
+        self.pending = None
+        result["exercise"] = stable
+        result["switched"] = True
+        result["pending"] = None
         return result
 
     def reset(self, default=None):
@@ -239,3 +273,4 @@ class ExerciseGate:
         self.confidence = 0.0
         self.suppressed = False
         self.pending = None
+        self.last_switch = 0.0
