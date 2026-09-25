@@ -1,0 +1,12 @@
+client_ts,server_ts,mode,exercise,detected,detect_conf,rep,faults,faults_cued,depth_ok,trunk_ok,knee_travel_ok,min_knee,max_trunk,max_knee_travel,quality,partial,analysis_ms,verdict_ms,queue_ms,llm_ms,cue_ms,coaching
+1790366804510,1790366805872.7,squat,squat,squat,0.835,1,shallow_depth,squat a little deeper,False,True,,112.8,27.8,,67,False,0.03,0.8,0.2,1361.8,1362.7,"Keep working on reaching that parallel, let's focus on extending your hips and knees."
+1790366809389,1790366810047.0,squat,squat,squat,0.93,2,,,True,True,,81.5,34.4,,100,False,0.04,1.7,0.4,655.8,658.0,"Great form, keep it up!"
+1790366823740,1790366825147.5,squat,squat,squat,0.826,3,shallow_depth,squat a little deeper,False,True,,102.4,46.2,,78,False,0.03,1.7,0.2,1405.6,1407.5,"Great effort, remember to lower down to a full parallel, and engage your core for better control."
+1790366831602,1790366832601.0,squat,squat,squat,0.954,4,,,True,True,,81.1,28.9,,100,False,0.06,2.3,0.5,996.1,999.0,"Great form, keep it up, you're on a roll!"
+1790366851002,1790366851662.5,lunge,lunge,lunge,0.956,1,,,True,True,True,99.7,6.8,-0.51,100,False,0.08,2.1,0.6,657.7,660.5,"Great start, keep it up!"
+1790366868167,1790366869146.9,lunge,lunge,lunge,0.941,1,shallow_depth,drop your front knee lower,False,True,True,110.4,11.0,-0.52,85,False,0.09,1.2,0.6,978.1,979.9,Remember to bend your front knee more deeply on this next rep.
+1790366873439,1790366874090.3,lunge,lunge,lunge,0.971,2,,,True,True,True,77.4,8.6,-0.58,100,False,0.07,1.5,0.3,649.4,651.3,"Great form, keep it up!"
+1790366881621,1790366882966.9,lunge,lunge,lunge,0.88,3,trunk_lean,keep your chest up,True,False,True,87.9,37.8,-0.67,67,False,0.1,1.6,0.7,1343.6,1345.9,"Keep your torso upright, engage your core, and maintain a straight line from head to heels."
+1790366888570,1790366889225.1,lunge,lunge,lunge,0.953,4,,,True,True,True,70.4,8.4,-0.64,100,False,0.02,1.9,0.2,652.9,655.1,"Great form, keep it up!"
+1790366895555,1790366896775.6,lunge,lunge,lunge,0.938,5,trunk_lean,keep your chest up,True,False,True,93.0,23.4,-0.61,82,False,0.07,1.8,0.6,1218.1,1220.6,"Keep your torso upright, and focus on keeping your weight evenly distributed on both feet."
+1790366902238,1790366903414.3,lunge,lunge,lunge,0.962,6,,,True,True,True,73.6,6.4,-0.61,100,False,0.03,1.2,0.2,1175.0,1176.3,"Great job, keep it up, perfect form, you're crushing this set!"

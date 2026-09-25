@@ -1,0 +1,6 @@
+client_ts,server_ts,mode,exercise,detected,detect_conf,rep,faults,faults_cued,depth_ok,trunk_ok,knee_travel_ok,min_knee,max_trunk,max_knee_travel,quality,partial,analysis_ms,verdict_ms,queue_ms,llm_ms,cue_ms,coaching
+1790366369455,1790366370105.7,squat,squat,other,0.966,1,,,True,True,,85.7,23.2,,100,False,0.03,1.5,0.2,649.0,650.7,"Great start, keep it up!"
+1790366374717,1790366375602.5,squat,squat,other,0.952,2,,,True,True,,87.2,26.5,,100,False,0.08,1.8,0.5,883.2,885.5,"Keep that form sharp, you're on a roll!"
+1790366379808,1790366380459.5,squat,squat,other,0.961,3,,,True,True,,85.8,27.0,,100,False,0.04,0.7,0.5,650.3,651.5,"Great form, keep it up!"
+1790366384640,1790366385580.0,squat,squat,other,0.946,4,,,True,True,,81.4,24.8,,100,False,0.04,1.3,0.3,938.4,940.0,"Great form, keep pushing, you're right on track!"
+1790366389293,1790366389947.6,squat,squat,other,0.92,5,,,True,True,,81.1,22.1,,100,False,0.03,0.9,0.2,653.5,654.6,"Great form, keep it up!"

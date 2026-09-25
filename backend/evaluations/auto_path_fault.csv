@@ -1,0 +1,4 @@
+client_ts,server_ts,mode,exercise,detected,detect_conf,rep,faults,faults_cued,depth_ok,trunk_ok,knee_travel_ok,min_knee,max_trunk,max_knee_travel,quality,partial,analysis_ms,verdict_ms,queue_ms,llm_ms,cue_ms,coaching
+1790366568209,1790366568836.7,auto,squat,squat,0.817,1,,,True,True,,76.0,33.1,,100,False,0.03,1.0,0.2,626.6,627.7,"Solid start, keep it up!"
+1790366571035,1790366572304.3,auto,squat,squat,0.975,2,shallow_depth,squat a little deeper,False,True,,111.2,28.8,,69,False,0.02,1.6,0.2,1267.4,1269.3,"Great effort, remember to lower down to parallel and engage your core to support your lower back."
+1790366573934,1790366575099.6,auto,squat,squat,0.965,3,shallow_depth,squat a little deeper,False,True,,104.9,27.5,,75,False,0.03,1.9,0.5,1163.2,1165.6,Remember to lower down to a full parallel to get the full benefit of the exercise.
