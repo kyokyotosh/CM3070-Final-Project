@@ -74,7 +74,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--data", default="../recordings")
-    p.add_argument("--freeze", type=int, default=6)
+    p.add_argument("--freeze", type=int, default=8)
     p.add_argument("--norm", choices=("image", "hip"), default="image")
     p.add_argument("--window", type=int, default=30)
     p.add_argument("--stride", type=int, default=5)

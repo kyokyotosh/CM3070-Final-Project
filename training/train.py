@@ -11,7 +11,7 @@ Modes:
   --mode inspect  Print the checkpoint's tensors, to confirm the architecture
                   matches before training anything.
 
-  --mode cv       Leave-one-session-out cross-validation. Fourteen folds, each
+  --mode cv       Leave-one-session-out cross-validation. Sixteen folds, each
                   testing on a recording the model never saw, pooled into one
                   confusion matrix. The report's recognition results come from
                   here.
@@ -57,7 +57,8 @@ class WindowDataset(Dataset):
         return len(self.y)
 
     def __getitem__(self, i):
-        x = augment(self.X[i], self.rng, self.mode) if self.training else self.X[i]
+        x = augment(self.X[i], self.rng,
+                    self.mode) if self.training else self.X[i]
         return torch.from_numpy(np.ascontiguousarray(x)), int(self.y[i])
 
 
@@ -135,7 +136,8 @@ def predict(model, X, dev, batch_size=128):
     model.eval()
     out = []
     for start in range(0, len(X), batch_size):
-        xb = torch.from_numpy(np.ascontiguousarray(X[start:start + batch_size]))
+        xb = torch.from_numpy(np.ascontiguousarray(
+            X[start:start + batch_size]))
         out.append(model(xb.to(dev)).argmax(1).cpu().numpy())
     return np.concatenate(out)
 
@@ -148,7 +150,7 @@ def main():
                    help="published ST-GCN .pth to adapt; omitting it trains "
                         "from random initialisation, which does not satisfy "
                         "the pre-trained model requirement")
-    p.add_argument("--freeze", type=int, default=6,
+    p.add_argument("--freeze", type=int, default=8,
                    help="number of leading blocks held fixed (of 10)")
     p.add_argument("--norm", choices=("image", "hip"), default="image",
                    help="input coordinate frame; image matches the "

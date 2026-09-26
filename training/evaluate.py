@@ -1,10 +1,10 @@
 """Leave-one-session-out cross-validation for the action recogniser.
 
-With fourteen recordings across three classes, a single held-out split would
+With sixteen recordings across three classes, a single held-out split would
 test on three sessions and report an accuracy with a very wide interval. Every
 session is instead held out exactly once, so each prediction is made on a
 recording the model never saw, and the confusion matrix pools predictions over
-all fourteen sessions.
+all sixteen sessions.
 
 The split is by session, never by window. Windows overlap by design, so
 neighbouring windows from one recording are near-identical; separating them

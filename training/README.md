@@ -65,18 +65,19 @@ python3 train.py --mode cv --checkpoint stgcn_ntu60.pth --norm hip
 python3 train.py --mode final --checkpoint stgcn_ntu60.pth --out recogniser.pt
 ```
 
-`--freeze N` sets how many of the ten blocks stay fixed; 6 is the default.
-Comparing a couple of values is cheap and is exactly the model-selection
-evidence the project brief asks for.
+`--freeze N` sets how many of the ten blocks stay fixed. The deployed model
+uses 8, chosen by cross-validation over 6, 8 and 10 frozen blocks.
 
-## Baseline to beat
+## Results
 
-Hand-crafted geometry plus a random forest, same windows, same
-cross-validation, 14 sessions:
+Leave-one-session-out cross-validation over 1,835 windows from 16 sessions:
 
-| normalisation | window accuracy | macro F1 | sessions correct |
-|---|---|---|---|
-| hip-centred | 0.877 | 0.875 | 14/14 |
-| image-centred | 0.869 | 0.866 | 14/14 |
+| configuration | trainable parameters | window accuracy | macro F1 | sessions correct |
+|---|---|---|---|---|
+| geometric baseline (hip-centred) | n/a | 0.859 | 0.858 | 16/16 |
+| ST-GCN, 10 blocks frozen | 771 | 0.753 | 0.751 | 15/16 |
+| ST-GCN, 8 blocks frozen (deployed) | 1,579,465 | 0.899 | 0.899 | 15/16 |
+| ST-GCN, 6 blocks frozen | 2,502,543 | 0.884 | 0.882 | 15/16 |
 
+The deployed model was trained with `--mode final --freeze 8` on all 16 sessions.
 
