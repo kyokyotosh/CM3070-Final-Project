@@ -1,27 +1,19 @@
-"""Synthetic load client for latency and rep-counting measurement.
+"""Synthetic load client for latency and repetition-counting tests.
 
-Drives the running server over the real WebSocket with generated landmark
-frames, at a rep cadence set on the command line. This exists because the
-interesting latency question cannot be answered by exercising in front of the
-camera: the queue behind the language model only builds when repetitions
-arrive faster than cues can be generated, which is faster than a person can
-squat. It also gives an exact expected repetition count, so the counter can be
-checked at speed rather than against a tally kept while moving.
+Drives the running server over the real WebSocket with generated landmarks at a
+set repetition cadence. The cue queue only builds when repetitions arrive
+faster than a person can squat, so it cannot be measured live, and here the
+expected count is exact. Landmarks are generated from target joint angles, so
+the server computes every angle itself, as in a live session.
 
-Landmarks are synthesised from the target joint angles rather than replayed
-from a recording, so the geometry stage is exercised on the same path as a
-real session: the client sends coordinates and the server derives every angle
-itself.
-
-Usage, with the server already running:
+Usage, with the server running:
 
     python3 load_client.py --reps 20 --period 1000
     python3 load_client.py --reps 20 --period 600
     python3 load_client.py --reps 20 --period 400 --out load_400ms.csv
 
-Defaults produce clean repetitions. Pass --bottom 110 for a depth fault or
---trunk 60 for a trunk fault, to measure a session where every rep carries a
-fault and the coaching text is longer.
+Repetitions are clean by default. --bottom 110 adds a depth fault and --trunk
+60 a trunk fault.
 """
 
 import argparse
@@ -37,9 +29,8 @@ URL = "ws://localhost:8765"
 # measured path matches the deployed configuration.
 FRAME_INTERVAL_MS = 1000 / 15
 
-# The server analyses every third frame, so each intended analysis frame is
-# sent this many times. Rep cadences stay expressed in analysis frames, which
-# keeps results comparable with the runs made before the rate increase.
+# The server analyses every third frame, so each analysis frame is sent this
+# many times. Cadences are expressed in analysis frames.
 FRAMES_PER_ANALYSIS = 3
 
 # Fixed skeleton geometry, in normalised image coordinates. The hip and ankle

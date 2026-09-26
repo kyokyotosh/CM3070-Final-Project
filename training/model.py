@@ -1,19 +1,11 @@
 """ST-GCN for exercise recognition, adapted from a pre-trained checkpoint.
 
-The architecture deliberately reproduces the published ST-GCN configuration
-the checkpoint was trained with: ten spatial-temporal blocks, 64 channels
-widening to 128 at stage five and 256 at stage eight, with temporal
-downsampling at those same two stages. Module and parameter names follow the
-reference implementation as well, because that is what allows a pre-trained
-`state_dict` to load into this code without the reference framework being
-installed as a dependency.
-
-Only the classification head is new. The published head predicts sixty action
-classes; it is discarded and replaced by a three-class head for squat, lunge
-and other. Everything below the head starts from the pre-trained weights, and
-`freeze_stages` holds the early blocks fixed so that adaptation happens in the
-later, more task-specific layers rather than overwriting general motion
-features with roughly 1,600 windows from one participant.
+The architecture and parameter names match the published ST-GCN configuration
+(ten blocks, 64 channels widening to 128 at block five and 256 at block eight,
+with temporal downsampling at the same blocks), so its state_dict loads without
+installing MMAction2. Only the classification head is new: the 60-class head is
+replaced by a three-class one for squat, lunge and other. freeze_stages keeps
+the early blocks fixed during adaptation.
 """
 
 import torch
@@ -131,10 +123,9 @@ class ExerciseRecogniser(nn.Module):
     def freeze_stages(self, n):
         """Hold the input normalisation and the first n blocks fixed.
 
-        Their batch-norm layers are also put in evaluation mode, otherwise
-        their running statistics would drift toward this small single-person
-        dataset even with the weights frozen, which is a quiet way to lose the
-        pre-trained behaviour while appearing to have preserved it.
+        Their batch-norm layers are also kept in evaluation mode, otherwise
+        their running statistics would drift toward the small training set even
+        with the weights frozen.
         """
         for param in self.data_bn.parameters():
             param.requires_grad = False
@@ -165,13 +156,10 @@ def _strip(key):
 
 
 def load_pretrained(model, path, verbose=True):
-    """Load a published checkpoint into this model and report what happened.
+    """Load a published checkpoint into this model and print what loaded.
 
-    The report is the point. A silent partial load is the most expensive
-    failure available here: training proceeds, the numbers look plausible, and
-    the project claims to have adapted a pre-trained model while having
-    trained most of it from random initialisation. Every tensor is accounted
-    for as loaded, skipped or missing.
+    A partial load would train mostly from random initialisation without any
+    error, so every tensor is reported as loaded, skipped or missing.
     """
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     state = checkpoint.get("state_dict", checkpoint)

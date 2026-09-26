@@ -1,22 +1,15 @@
 """Hand-crafted geometric baseline for the action recogniser.
 
-The learned model has to earn its place. This baseline classifies a window
-from a handful of interpretable measurements, using the same windows, the same
-normalisation and the same cross-validation as the network. If the network
-does not beat it, that is a result worth reporting rather than hiding.
-
-The features are deliberately the ones a person would name when asked how to
-tell these movements apart: how far apart the feet are, how much the knees
-bend, and how much the hips travel.
+A random forest on a few interpretable features (foot separation, knee bend and
+hip travel), evaluated on the same windows, normalisation and cross-validation
+as the ST-GCN, so the two can be compared directly.
 """
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-# Indices into the COCO-17 layout built by dataset.JOINTS. These must be
-# kept in step with that layout: the same integers point at different joints
-# in a different keypoint order, and wrong indices still produce plausible
-# looking accuracy from meaningless features.
+# Indices into the COCO-17 layout built by dataset.JOINTS. Keep them in step
+# with that layout: wrong indices still give plausible-looking accuracy.
 NOSE = 0
 L_SH, R_SH = 5, 6
 L_HIP, R_HIP = 11, 12

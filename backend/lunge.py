@@ -1,6 +1,5 @@
-# Forward-lunge diagnosis thresholds, in degrees unless noted. These are
-# starting values and are expected to need empirical calibration through
-# self-testing, in the same way as the squat thresholds.
+# Forward-lunge thresholds, in degrees unless noted, calibrated from
+# self-recorded repetitions of one user.
 DOWN_ENTER = 130.0        # front-knee angle below this: user is descending
 UP_EXIT = 160.0           # front-knee angle above this: user has stood up
 DEPTH_TARGET = 110.0      # front-knee angle at/below this counts as adequate depth
@@ -9,24 +8,19 @@ TRUNK_MAX = 20.0          # trunk lean above this flags excessive forward lean
 KNEE_TRAVEL_MAX = 0.15
 MIN_VISIBILITY = 0.5      # below this, the front-leg reading is not trusted
 
-# Physically implausible front-knee readings (a fully folded shin) come from
-# bad frames, not real movement. A single such frame was seen to pass depth by
-# polluting the per-rep minimum. Readings below this floor are rejected before
-# they enter the state machine, the same defect class as the trunk-lean gate.
+# Knee readings below this come from bad frames, not real movement. They are
+# dropped before the state machine, so one frame cannot set a repetition's
+# minimum.
 KNEE_MIN_PLAUSIBLE = 30.0
 
 
 class LungeAnalyzer:
-    """Deterministic forward-lunge rep counter and form diagnoser.
+    """Rule-based forward-lunge repetition counter and form checker.
 
-    Mirrors SquatAnalyzer: the front-knee angle drives a two-phase state
-    machine (up / down) with hysteresis to avoid double-counting, and each
-    completed rep is judged once. The lunge adds a third criterion, knee
-    travel, on top of the depth and trunk checks shared with the squat.
-
-    Trunk lean is only aggregated while it is valid (visibility-gated in
-    angles.analyze_lunge), so a dropped shoulder or hip cannot push a
-    corrupted angle into the verdict.
+    Same structure as SquatAnalyzer: the front-knee angle drives a two-phase
+    state machine with hysteresis, and each completed repetition is judged once
+    on depth, trunk lean and knee travel. Trunk lean is aggregated only from
+    frames that pass the visibility gate.
     """
 
     def __init__(self):

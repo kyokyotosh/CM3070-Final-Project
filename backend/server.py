@@ -27,16 +27,13 @@ EXERCISES = {
 }
 DEFAULT_EXERCISE = "squat"
 
-# The client streams at 15 Hz for the recogniser, which was trained at that
-# rate. Form analysis runs on every third frame, preserving the 200 ms
-# interval its thresholds were calibrated against and keeping latency results
-# comparable with the versions measured before recognition was added.
+# The client streams at 15 Hz, the rate the recogniser was trained at. Form
+# analysis runs on every third frame, keeping the 200 ms interval its
+# thresholds were calibrated at.
 ANALYSIS_STRIDE = 3
 
-# Classify every fifth frame, about three times a second. Windows are two
-# seconds long and overlap heavily, so a higher rate would spend GPU time to
-# re-decide almost the same question. This matches the stride the model was
-# trained with.
+# Classify every fifth frame, about three times a second. Consecutive
+# two-second windows overlap heavily, and this matches the training stride.
 RECOGNITION_STRIDE = 5
 
 METRIC_MAP = {
@@ -55,12 +52,10 @@ LOG_COLUMNS = [
 
 
 def _make_analyzers():
-    """One analyser per exercise, held for the life of the session.
+    """One analyser per exercise, kept for the whole session.
 
-    Switching exercise selects a different analyser rather than building one,
-    so a switch never discards a rep count. The first version rebuilt on every
-    switch, which meant one spurious detection wiped the set irreversibly: the
-    cost of a false switch has to stay proportional to the mistake.
+    Switching exercise selects an existing analyser instead of creating a new
+    one, so an automatic switch, even a wrong one, never loses a count.
     """
     return {name: (fn, cls()) for name, (fn, cls) in EXERCISES.items()}
 
@@ -112,12 +107,11 @@ async def _writer(websocket, outbox):
 
 
 async def _recognition_worker(inbox, results, recogniser):
-    """Classify windows away from the read loop.
+    """Classify windows off the read loop.
 
-    Inference takes tens of milliseconds. Running it inline would stall the
-    reading of landmark frames, which is the same mistake the language model
-    made before generation was moved off this path. Results are posted to a
-    queue and applied by the read loop, which owns the analyser.
+    Inference takes tens of milliseconds and would otherwise delay reading
+    frames. Results go to a queue that the read loop applies, since it owns the
+    analysers.
     """
     while True:
         window, epoch = await inbox.get()
@@ -309,10 +303,9 @@ async def handler(websocket):
             if status["feedback"] is not None:
                 session["coaching"] = status["feedback"]
 
-            # A repetition detected while the recogniser says the person is
-            # not exercising is discarded rather than coached. This is the
-            # third class doing its job: sitting or stretching flexes the
-            # knees enough to complete the state machine.
+            # A repetition completed while the recogniser reports "other" is
+            # discarded: sitting or stretching bends the knees enough to
+            # complete one.
             if verdict is not None and suppressed:
                 verdict = None
                 session["coaching"] = "Not exercising, so that was not counted."

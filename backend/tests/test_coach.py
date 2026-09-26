@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..")))
 
-"""Unit tests for deterministic fault selection in coach.py.
+"""Unit tests for rule-based fault selection in coach.py.
 
 These test the selection and fallback logic only, which is pure and needs no
 language model. The ollama import in coach.py is lazy, so this suite runs
@@ -63,9 +63,8 @@ class TestFaultSelection(unittest.TestCase):
         self.assertNotIn("drop your front knee lower", cues)
 
     def test_observed_rep6_surfaces_both_faults(self):
-        """Rep 6 from calibration: good depth, trunk AND knee-travel both fail.
-        Previously the trunk fault was dropped from the sentence; both must now
-        be surfaced."""
+        """Rep 6 from calibration: good depth, but trunk and knee travel both
+        fail. Both faults must be surfaced."""
         v = lunge_verdict(depth_ok=True, trunk_ok=False, knee_travel_ok=False)
         faults = select_faults(v)
         cues = [c for c, _ in faults]

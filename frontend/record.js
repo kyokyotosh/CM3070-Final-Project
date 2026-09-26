@@ -6,16 +6,10 @@ import {
 
 /* Landmark recorder for the action-recognition dataset.
 
-   Separate from the coaching app on purpose: this page never opens a
-   WebSocket and never analyses form. It captures raw MediaPipe landmarks with
-   a class label and the recording conditions, so that sessions can later be
-   split by session rather than by window. Splitting a sliding window across
-   train and test would put near-identical samples on both sides and report an
-   accuracy that means nothing.
-
-   Capture runs at CAPTURE_HZ, matching the rate the live app streams at, so
-   the model is trained on the same temporal resolution it will see at
-   inference. */
+   Separate from the coaching app: it never opens a WebSocket or analyses
+   form. It saves raw MediaPipe landmarks with a class label and the
+   recording conditions, one file per session, so the dataset can be split by
+   session. Capture runs at CAPTURE_HZ, the rate the live app streams at. */
 
 const CAPTURE_HZ = 15;
 const CAPTURE_INTERVAL_MS = 1000 / CAPTURE_HZ;

@@ -13,8 +13,7 @@ Modes:
 
   --mode cv       Leave-one-session-out cross-validation. Sixteen folds, each
                   testing on a recording the model never saw, pooled into one
-                  confusion matrix. The report's recognition results come from
-                  here.
+                  confusion matrix.
 
   --mode final    Fine-tune once on every session and save the model the
                   server will load. Run only after cross-validation, since

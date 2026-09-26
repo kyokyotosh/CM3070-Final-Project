@@ -1,24 +1,10 @@
-"""Live exercise recognition, and the gate that decides when to act on it.
+"""Live exercise recognition and the gate that acts on it.
 
-Two responsibilities, kept separate because they fail differently.
-
-`Recogniser` is inference: it holds a rolling window of landmark frames and
-classifies it as squat, lunge or other. It knows nothing about the session.
-
-`ExerciseGate` decides what the coaching system should do with a stream of
-those classifications. This is where the real design work is, because a
-classifier that is right 90% of the time on two-second windows still produces
-a prediction that flickers, and acting on every flicker would be worse than
-the manual selector it replaces. The gate requires a sustained majority at
-sufficient confidence, and refuses to switch analysers in the middle of a
-repetition.
-
-The third class earns its place here. `other` does not select an analyser; it
-suppresses verdicts. Sitting down or stretching flexes the knees enough to
-drive a rep through the state machine, and without a way to recognise
-not-exercising, the system would count those as repetitions and coach them.
-Recognition is therefore a gate on the form analysis as much as a selector
-for it.
+Recogniser holds a rolling window of landmark frames and classifies it as
+squat, lunge or other. ExerciseGate turns that stream of predictions, which
+flickers even from an accurate model, into stable decisions: which analyser is
+active, and whether verdicts are suppressed because the person is not
+exercising.
 """
 
 import collections
@@ -29,9 +15,8 @@ import time
 import numpy as np
 import torch
 
-# The model definition and its graph live with the training code, so the
-# architecture the server instantiates is the same file that produced the
-# weights. Vendoring a copy here would let the two drift apart silently.
+# Import the model and graph from the training package, so the server runs
+# the same architecture that produced the weights.
 TRAINING_DIR = os.environ.get(
     "RECOGNISER_TRAINING_DIR",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "training"))
@@ -45,12 +30,10 @@ DEFAULT_MODEL_PATH = os.environ.get(
     "RECOGNISER_MODEL",
     os.path.join(os.path.abspath(TRAINING_DIR), "recogniser.pt"))
 
-# MediaPipe-33 indices supplying the COCO-17 layout, in COCO order. This MUST
-# match dataset.JOINTS in the training package: the same integers mean
-# different joints in a different order, and a mismatch produces confident
-# nonsense rather than an error. The assertion in `Recogniser.__init__`
-# catches a wrong joint count but not a wrong order, so treat this list as
-# paired with the training code.
+# MediaPipe-33 indices for the COCO-17 layout, in COCO order. Must match
+# dataset.JOINTS in the training package: a wrong order still runs but gives
+# wrong predictions, and the check in Recogniser.__init__ only catches a wrong
+# joint count.
 JOINTS = [0, 2, 5, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
 
 CLASSES = ["squat", "lunge", "other"]
@@ -148,24 +131,17 @@ class Recogniser:
 
 
 class ExerciseGate:
-    """Turn a flickering stream of classifications into stable decisions.
+    """Turn a flickering stream of predictions into stable decisions.
 
-    Acquiring an exercise and changing it are deliberately not symmetric.
-    Deciding what the person has started is easy: a short majority at modest
-    confidence. Deciding they have switched to a different exercise is hard,
-    because a switch changes which analyser is authoritative, and a spurious
-    one mid-set is worse than a slow correct one. A switch therefore needs a
-    longer majority, higher mean confidence, a gap since the last switch, and
-    the active analyser to be between repetitions.
+    Acquiring an exercise uses a loose test (3 of the last 7 predictions at a
+    mean confidence of 0.6). Switching to a different one uses a strict test (5
+    of 7 at 0.8), at least 4 s after the last switch, and only between
+    repetitions. Confidence falls from about 0.96 to 0.73 as form tires, so a
+    single loose threshold made the analyser flap mid-set.
 
-    Observed confidences fall from about 0.96 early in a set to about 0.73 as
-    form degrades, which is exactly when a single loose threshold starts to
-    flap, so the switch floor sits above that range.
-
-    The third class earns its place here. "other" never selects an analyser;
-    it suppresses verdicts. Sitting down or stretching flexes the knees enough
-    to complete a repetition, and without a way to recognise not-exercising
-    the system would count and coach those.
+    "other" never selects an analyser. While it is the stable class, verdicts
+    are suppressed, because sitting or stretching bends the knees enough to
+    complete a repetition.
     """
 
     def __init__(self, default="squat", history=7,

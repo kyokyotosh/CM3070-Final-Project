@@ -1,23 +1,13 @@
-"""Audit logged coaching cues for coverage, additions and contradictions.
+"""Audit logged coaching cues for coverage and faithfulness.
 
-The coaching layer is judged on two properties (Evaluation chapter):
-
-  coverage      every fault the verdict reports is mentioned in the cue
-  faithfulness  the cue neither contradicts the verdict nor adds a correction
+  coverage      every fault in the verdict is mentioned in the cue
+  faithfulness  the cue does not contradict the verdict or add a correction
                 the verdict does not contain
 
-The draft evaluation checked faithfulness for contradicted criteria and
-invented faults or numbers. This script applies the full definition to every
-logged cue, including unrequested corrections ("engage your core") that the
-earlier check did not look for.
-
-Classification is keyword-based, so it is reproducible, and every cue is
-written to cue_audit.csv with the matches that triggered each label, so the
-automatic labels can be reviewed by hand before any figure is reported.
-
-Faults are derived from the verdict flags (depth_ok, trunk_ok,
-knee_travel_ok), which every log schema carries. The two-fault cue cap was
-never reached in any logged repetition, so every failed criterion was cued.
+Labels come from fixed keyword rules, so the audit is reproducible. Every cue
+is written to evaluations/cue_audit.csv with the rule matches behind its
+labels, for manual review. Faults are read from the verdict flags (depth_ok,
+trunk_ok, knee_travel_ok), which every log schema contains.
 
 Run from backend/:
 

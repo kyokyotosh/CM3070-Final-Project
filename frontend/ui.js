@@ -1,10 +1,8 @@
 /* ==========================================================================
    interface layer
    --------------------------------------------------------------------------
-   This file owns presentation only. It never decides whether a rep was good,
-   and it no longer scores one either: verdicts, measurements and the quality
-   score all arrive from the backend, in keeping with the rule-based analysis
-   layer being the single diagnostic authority.
+   Presentation only. Verdicts, measurements and quality scores all come from
+   the backend; this file never decides or scores a repetition.
 
    main.js talks to it through window.CoachUI:
 

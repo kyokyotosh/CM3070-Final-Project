@@ -1,30 +1,23 @@
-# Squat diagnosis thresholds, in degrees. These are starting values and
-# are expected to need empirical calibration through self-testing.
+# Squat thresholds, in degrees, calibrated from self-recorded repetitions of
+# one user.
 DOWN_ENTER = 120.0     # knee angle below this: user is descending into a squat
 UP_EXIT = 160.0        # knee angle above this: user has returned to standing
 PARALLEL = 95.0        # knee angle at/below this counts as full depth
 TRUNK_MAX = 50.0       # trunk lean above this flags excessive forward lean
 MIN_VISIBILITY = 0.5   # below this, the reading is not trusted
 
-# Physically implausible knee readings (a fully folded shin) come from bad
-# frames, not real movement. An observed 9.2 degree reading passed depth by
-# polluting the per-rep minimum, the same defect class as the lunge floor and
-# the trunk visibility gate.
+# Knee readings below this come from bad frames, not real movement (an
+# observed 9.2 degree reading once passed the depth check).
 KNEE_MIN_PLAUSIBLE = 30.0
 
 
 class SquatAnalyzer:
-    """Deterministic squat rep counter and form diagnoser.
+    """Rule-based squat repetition counter and form checker.
 
-    Holds per-session state. The knee angle drives a two-phase state
-    machine (up / down) with hysteresis to avoid double-counting. Depth
-    and trunk lean are judged once per completed rep.
-
-    Trunk lean is now aggregated only while it is valid. angles.analyze_
-    landmarks gates the shoulder-hip vector on landmark visibility and
-    returns trunk_lean as None when it cannot be trusted, so a dropped
-    landmark can no longer push an impossible angle (the 175-179 degree
-    readings seen in the prototype evaluation) into the verdict.
+    Holds per-session state. The knee angle drives a two-phase state machine
+    (up / down) with hysteresis so each repetition is counted once, and depth
+    and trunk lean are judged once per completed repetition. Trunk lean is
+    aggregated only from frames that pass the visibility gate.
     """
 
     def __init__(self):

@@ -14,20 +14,13 @@ SYSTEM_PROMPT = (
     "Keep it under 20 words, warm and plain. Output only the sentence."
 )
 
-# --- Deterministic fault selection -----------------------------------------
+# --- Rule-based fault selection ----------------------------------------------
 #
-# When several faults occur in one rep, a single-sentence coaching cue used to
-# drop whichever fault was listed last: an LLM compressing to one sentence
-# keeps the first items and loses the tail. Coverage is restored here
-# deterministically. The form layer, not the language model, decides which
-# faults to surface, in a fixed priority, and caps how many are passed for
-# phrasing so the whole set survives compression into one sentence.
-#
-# Priority rationale: posture (spinal) cues first, then joint-tracking cues,
-# then depth, which is an effectiveness cue rather than a safety one. This
-# ordering is a coaching design choice and can be re-ordered without touching
-# the phrasing layer. Only an explicit False counts as a fault; None means the
-# criterion could not be measured this rep and is not surfaced as a fault.
+# A one-sentence cue tends to keep the first faults it is given and drop the
+# rest, so the rule layer decides which faults are spoken: at most
+# MAX_FAULTS_SURFACED, in a fixed priority. Posture comes first, then knee
+# tracking, then depth, which affects effectiveness rather than safety. Only
+# an explicit False is a fault; None means the criterion was not measured.
 MAX_FAULTS_SURFACED = 2
 
 # (verdict_key, exercise or None for any, canonical name, fallback cue,
@@ -68,8 +61,7 @@ def detect_faults(verdict):
 
 
 def select_faults(verdict):
-    """Return the prioritised, capped list of (cue, description) faults for a
-    verdict. Deterministic: no language model involved."""
+    """The prioritised, capped (cue, description) faults for a verdict."""
     return [(cue, desc) for _, cue, desc in _breached(verdict)][:MAX_FAULTS_SURFACED]
 
 
@@ -91,8 +83,9 @@ def _verdict_to_text(verdict):
 
 
 async def phrase_feedback(verdict):
-    """Translate a decided verdict into one coaching sentence.
-    Falls back to a deterministic string if the model is unavailable."""
+    """Phrase a decided verdict as one coaching sentence.
+
+    Falls back to fixed wording if the model is unavailable."""
     user_msg = _verdict_to_text(verdict)
     try:
         from ollama import AsyncClient  # lazy import so pure logic is testable
@@ -112,8 +105,8 @@ async def phrase_feedback(verdict):
 
 
 def _fallback(verdict):
-    """Deterministic coaching text, used when the model is unavailable. Covers
-    exactly the same selected faults as the LLM path."""
+    """Fixed coaching text for when the model is unavailable. Covers the same
+    selected faults as the model path."""
     n = verdict["rep_number"]
     faults = select_faults(verdict)
     if not faults:
@@ -122,11 +115,10 @@ def _fallback(verdict):
 
 
 async def warm_up():
-    """Trigger the model's one-off load before the first user rep.
+    """Load the model at server start.
 
-    The first generation of a session cost about 2.5 seconds against 700 to
-    900 ms warm. That cost belongs to the server starting, not to the user's
-    first repetition, so it is paid here.
+    A cold first call takes about 2.5 s against 0.7 to 0.9 s warm, so the cost
+    is paid before the first repetition rather than on it.
     """
     try:
         from ollama import AsyncClient

@@ -1,20 +1,13 @@
 """Dataset loading and windowing for the action recogniser.
 
-Sessions recorded by frontend/record.html are read from disk and cut into
-fixed-length windows. Two rules are enforced here rather than left to the
-training script, because getting either wrong invalidates the reported
-accuracy:
+Sessions recorded with frontend/record.html are cut into fixed-length windows.
+A window never spans two sessions, and every window carries its session id so
+that splits are made by session. Overlapping windows from one recording are
+near-identical, so a split by window would measure memorisation rather than
+generalisation.
 
-  1. A window never spans two sessions.
-  2. Every window carries its source session id, so splits can be made by
-     session. Splitting by window would place near-identical, overlapping
-     samples on both sides and report memorisation of one recording rather
-     than generalisation to a new one.
-
-MediaPipe's 33 landmarks are reduced to the 17 COCO keypoints, which is the
-layout the pre-trained checkpoint was trained on. Every one of the 17 maps
-directly from a MediaPipe landmark, with no synthesised joints, so no
-topology is invented at the boundary between the two models.
+MediaPipe's 33 landmarks are reduced to the 17 COCO keypoints the pre-trained
+checkpoint uses. Each maps directly from a MediaPipe landmark.
 """
 
 import glob
@@ -52,11 +45,9 @@ def load_session(path):
     if raw.ndim != 3 or raw.shape[1] != 33:
         raise ValueError(f"{path}: expected 33 landmarks per frame, got {raw.shape}")
 
-    # Keep x, y and visibility. The pre-trained model's third channel is a
-    # keypoint confidence, which is what visibility is, so the channel
-    # meanings line up. z from a single camera is a weak estimate and is
-    # dropped rather than given equal weight with the image-plane
-    # coordinates the form analysis also relies on.
+    # Keep x, y and visibility. The checkpoint's third channel is a keypoint
+    # confidence, which matches visibility. z from a single camera is
+    # unreliable and is dropped.
     frames = raw[:, JOINTS][:, :, [0, 1, 3]]
 
     meta = {
@@ -72,22 +63,12 @@ def load_session(path):
 def normalise(window, mode="image"):
     """Put a window into the coordinate frame the model expects.
 
-    Two modes, because the choice is a real trade-off worth measuring rather
-    than assuming:
-
-    "image" reproduces the preprocessing the pre-trained checkpoint was
-    trained with: coordinates centred on the image and scaled to roughly
-    [-1, 1]. MediaPipe already returns normalised coordinates, so this is a
-    shift and a scale. Matching the checkpoint's input distribution is what
-    makes its frozen early layers useful.
+    "image" matches the checkpoint's own preprocessing: coordinates centred on
+    the image and scaled to about [-1, 1]. This is the deployed setting.
 
     "hip" centres each frame on the hip midpoint and scales by torso length,
-    which makes a window invariant to where the person stands and how large
-    they appear. It generalises better across camera distance but moves the
-    input away from what the pre-trained layers saw.
-
-    Compare the two under cross-validation and report which transferred
-    better; do not assume.
+    removing the effect of position and distance but moving the input away from
+    what the pre-trained layers saw.
     """
     out = window.copy()
     xy = out[:, :, :2]

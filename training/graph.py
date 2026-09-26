@@ -1,19 +1,12 @@
-"""COCO-17 skeleton graph, matching the layout the pre-trained checkpoint uses.
+"""COCO-17 skeleton graph matching the pre-trained checkpoint.
 
-The pre-trained ST-GCN this project adapts was trained with MMAction2's `coco`
-layout and `stgcn_spatial` partitioning. The graph is reproduced faithfully
-here, because a graph convolution's weights are only meaningful against the
-adjacency they were trained with: feeding the same weights a differently
-ordered or differently normalised graph silently destroys what was learned.
+Reproduces MMAction2's `coco` layout with `stgcn_spatial` partitioning. Graph
+convolution weights only make sense with the adjacency they were trained on, so
+this must match the checkpoint. model.load_pretrained uses the adjacency stored
+in the checkpoint when present; this module is the fallback.
 
-As a safeguard, `model.load_pretrained` prefers the adjacency stored inside
-the checkpoint over the one computed here. This module is the fallback and
-the documentation of what that adjacency is.
-
-Partitioning splits each joint's neighbourhood into three: the joint itself,
-neighbours nearer the graph centre, and neighbours further from it. That lets
-a single convolution tell movement toward the body centre from movement away,
-which is what distinguishes a descent from an ascent.
+Each joint's neighbourhood is split into three: the joint itself, neighbours
+nearer the graph centre and neighbours further from it.
 """
 
 import numpy as np

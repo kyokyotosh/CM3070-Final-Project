@@ -1,19 +1,12 @@
 """Training-time augmentation for single-participant skeleton data.
 
-Every recording comes from one person in one room, so the main risk is
-memorising that person's framing and tempo rather than learning the movement.
-These transforms attack exactly that: they vary facing, apparent size,
-position in frame and keypoint confidence, none of which should change which
-exercise is being performed.
+All recordings come from one person in one room, so the transforms vary what
+should not affect the label: facing, apparent size, position in frame, camera
+tilt and keypoint confidence. Mirroring is safe because the lunge analyser
+finds the front leg in either facing direction.
 
-Mirroring is legitimate here because the pipeline downstream is already
-facing-invariant: the lunge analyser identifies the front leg from the ankle
-furthest from the hip centre line, in either direction.
-
-Magnitudes are scaled to the coordinate frame in use. In "image" mode
-coordinates span roughly [-1, 1] across the frame, so a 0.1 shift is a
-twentieth of the frame; in "hip" mode the unit is one torso length and the
-same number means something different.
+Magnitudes depend on the coordinate frame: in "image" mode coordinates span
+about [-1, 1]; in "hip" mode the unit is one torso length.
 """
 
 import numpy as np

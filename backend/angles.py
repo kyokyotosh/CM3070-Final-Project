@@ -46,12 +46,10 @@ def leg_visibility(landmarks, hip_idx, knee_idx, ankle_idx):
 
 
 def trunk_visibility(landmarks):
-    """Lowest confidence among the four landmarks used for the trunk vector.
+    """Lowest visibility among the four landmarks used for the trunk vector.
 
-    The prototype's trunk-lean defect came from computing the shoulder-hip
-    vector without first checking those landmarks were reliable. Gating on
-    this value stops a dropped shoulder or hip from producing an impossible
-    angle."""
+    A trunk angle computed from a dropped shoulder or hip is meaningless, so
+    callers gate on this value."""
     return min(
         landmarks[LEFT_SHOULDER].get("visibility", 0.0),
         landmarks[RIGHT_SHOULDER].get("visibility", 0.0),
@@ -61,11 +59,10 @@ def trunk_visibility(landmarks):
 
 
 def analyze_landmarks(landmarks):
-    """Compute squat-relevant angles, selecting the more visible leg.
+    """Compute squat angles, using the more visible leg.
 
-    Trunk lean is now visibility-gated: if the shoulder or hip landmarks are
-    not confidently detected, trunk_lean is returned as None and trunk_valid
-    is False, rather than passing a corrupted angle downstream."""
+    If the shoulder or hip landmarks are not confidently detected, trunk_lean
+    is None and trunk_valid is False."""
     if not landmarks or len(landmarks) < 33:
         return None
 
@@ -105,20 +102,14 @@ def _sign(v):
 def analyze_lunge(landmarks):
     """Compute forward-lunge angles from a side-on view.
 
-    Front-leg identification: side-on, both knees flex during a lunge, so the
-    knee angle alone cannot distinguish the lead leg from the trailing leg.
-    The front foot is instead identified as the ankle planted furthest from
-    the body's centre line (the hip midpoint) along the horizontal axis. This
-    holds for a normal forward lunge, where the lead foot steps a full stride
-    ahead while the trailing foot stays closer to the original standing line.
-    A session should use a consistent lead leg; this is enforced by the
-    self-testing protocol rather than inferred automatically.
+    Both knees bend during a lunge, so the front leg is taken as the ankle
+    furthest from the hip midpoint along the horizontal axis. A session should
+    use one lead leg throughout.
 
-    Returns front-knee angle (depth signal), the identified front side, the
-    front-leg visibility, the visibility-gated trunk lean, and the knee-travel
-    ratio: how far the front knee sits ahead of the front ankle in the step
-    direction, normalised by shin length so it is invariant to the user's
-    distance from the camera."""
+    Returns the front-knee angle, the front side and its visibility, the gated
+    trunk lean, and the knee-travel ratio: how far the front knee sits ahead of
+    the front ankle, divided by shin length so it does not depend on distance
+    from the camera."""
     if not landmarks or len(landmarks) < 33:
         return None
 
@@ -140,10 +131,9 @@ def analyze_lunge(landmarks):
         landmarks[hip_i], landmarks[knee_i], landmarks[ankle_i])
     front_vis = leg_visibility(landmarks, hip_i, knee_i, ankle_i)
 
-    # Knee travel: front knee ahead of front ankle in the forward direction,
-    # positive when the knee drifts past the toe. Normalised by shin length
-    # (vertical knee-to-ankle distance) so the same absolute drift means the
-    # same thing regardless of camera distance.
+    # Positive when the knee is past the toes. Divided by shin length
+    # (vertical knee-to-ankle distance) to remove the effect of camera
+    # distance.
     knee_ahead = (landmarks[knee_i]["x"] - landmarks[ankle_i]["x"]) * forward
     shin = abs(landmarks[knee_i]["y"] - landmarks[ankle_i]["y"])
     if shin < 1e-6:

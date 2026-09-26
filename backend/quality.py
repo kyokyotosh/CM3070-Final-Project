@@ -1,20 +1,12 @@
-"""Rep quality scoring.
+"""Repetition quality score, 0 to 100.
 
-The interface shows a 0-100 quality score for each repetition. That score is a
-judgement about movement, so it is produced here, in the rule-based layer, and
-never in the browser. The frontend renders the number it is given.
-
-Scoring is a transparent penalty model rather than a learned one. A repetition
-with no breached criterion scores 100. Each breached criterion subtracts a
-fixed penalty plus a margin-scaled component, so a rep that misses depth by two
-degrees does not score the same as one that misses it by twenty. Thresholds are
-imported from the analyser modules so there is a single source of truth for the
-calibrated values.
-
-Every breached criterion is scored, including any fault beyond the two-fault
-cap applied in coach.select_faults. The cap limits what is said aloud, not what
-is measured. A criterion reported as None was not measured this rep and is not
-penalised, in keeping with the visibility gating in angles.py.
+Computed in the rule-based layer; the frontend only displays it. A repetition
+with no breached criterion scores 100. Each breach costs a fixed penalty plus a
+capped component proportional to how far the threshold was missed. Every breach
+is scored, including faults beyond the two-fault cue cap in
+coach.select_faults, and a criterion that was not measured (None) is not
+penalised. Thresholds are imported from the analysers, so there is one source
+of truth.
 """
 
 from squat import PARALLEL as SQUAT_DEPTH, TRUNK_MAX as SQUAT_TRUNK

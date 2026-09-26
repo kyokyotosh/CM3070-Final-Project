@@ -218,7 +218,7 @@ class TestLungeStateMachine(unittest.TestCase):
         self.assertTrue(v["depth_ok"])
 
     def test_travel_threshold_flags_observed_fault(self):
-        """0.24 was an observed knee-over-toe fault; it must now be flagged."""
+        """0.24 was an observed knee-over-toe fault; it must be flagged."""
         an = LungeAnalyzer()
         v = self._do_rep(an, bottom_knee=90, travel=0.24)
         self.assertFalse(v["knee_travel_ok"])

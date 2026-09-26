@@ -1,20 +1,9 @@
-"""Pre-flight checks before committing to a full cross-validation run.
+"""Checks to run before a full cross-validation.
 
-Fourteen folds take a while, and three things can make the whole run
-worthless in ways the accuracy figure will not reveal. Each is checked here,
-in under a minute:
-
-  1. Does the graph this code computes match the one inside the checkpoint?
-     The loader copies the checkpoint's adjacency buffer over the computed
-     one, so a mismatch is absorbed silently at training time and only
-     matters later, when the saved model is exported and the buffer travels
-     with it. A mismatch also means graph.py, and whatever the report says
-     about the graph, is wrong.
-
-  2. Does a forward pass produce sensible logits on real windows, and does
-     the frozen/trainable split match what was asked for?
-
-  3. How long does one fold actually take on this machine?
+  1. The graph computed by graph.py matches the adjacency in the checkpoint.
+  2. A forward pass on real windows gives finite logits, and the
+     frozen/trainable split is as requested.
+  3. How long one fold takes on this machine.
 
 Usage:
     python3 preflight.py --checkpoint stgcn_ntu60.pth --data ../training/sessions
